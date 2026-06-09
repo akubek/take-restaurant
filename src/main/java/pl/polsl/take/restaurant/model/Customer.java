@@ -29,6 +29,14 @@ public class Customer {
     private String phoneNumber;
     private String email;
 
+    public Customer(String firstName, String lastName, String phoneNumber, String email)
+    {
+    	this.firstName = firstName;
+    	this.lastName = lastName;
+    	this.phoneNumber = phoneNumber;
+    	this.email = email;
+    }
+    
     @OneToMany(mappedBy = "customer", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<Order> orders = new ArrayList<>();
 }
