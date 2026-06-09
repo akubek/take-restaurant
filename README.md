@@ -3,5 +3,6 @@
 ### Temat: Restauracja
 
 ### Autorzy:
- - Rafał Sularczyk
  - Artur Kubek
+ - Rafał Sularczyk
+ - Robert Dulik
