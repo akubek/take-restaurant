@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
-import pl.polsl.take.restaurant.model.OrderRepository;
+import pl.polsl.take.restaurant.repository.OrderRepository;
 
 @Service
 @RequiredArgsConstructor

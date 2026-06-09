@@ -6,10 +6,10 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import pl.polsl.take.restaurant.model.Customer;
-import pl.polsl.take.restaurant.model.CustomerRepository;
 import pl.polsl.take.restaurant.model.Order;
-import pl.polsl.take.restaurant.model.OrderRepository;
 import pl.polsl.take.restaurant.model.DTOs.CreateCustomerDTO;
+import pl.polsl.take.restaurant.repository.CustomerRepository;
+import pl.polsl.take.restaurant.repository.OrderRepository;
 
 @Service
 @RequiredArgsConstructor

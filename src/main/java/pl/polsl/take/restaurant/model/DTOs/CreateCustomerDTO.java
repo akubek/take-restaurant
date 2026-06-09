@@ -3,7 +3,7 @@ package pl.polsl.take.restaurant.model.DTOs;
 import lombok.Getter;
 import lombok.Setter;
 import pl.polsl.take.restaurant.model.Customer;
-import pl.polsl.take.restaurant.model.CustomerRepository;
+import pl.polsl.take.restaurant.repository.CustomerRepository;
 
 @Getter @Setter
 public class CreateCustomerDTO {

@@ -7,15 +7,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import pl.polsl.take.restaurant.model.Customer;
-import pl.polsl.take.restaurant.model.CustomerRepository;
 import pl.polsl.take.restaurant.model.Dish;
-import pl.polsl.take.restaurant.model.DishRepository;
 import pl.polsl.take.restaurant.model.Order;
 import pl.polsl.take.restaurant.model.OrderItem;
-import pl.polsl.take.restaurant.model.OrderRepository;
 import pl.polsl.take.restaurant.model.DTOs.CreateOrderDTO;
 import pl.polsl.take.restaurant.model.DTOs.CreateOrderItemDTO;
 import pl.polsl.take.restaurant.model.DTOs.OrderDTO;
+import pl.polsl.take.restaurant.repository.CustomerRepository;
+import pl.polsl.take.restaurant.repository.DishRepository;
+import pl.polsl.take.restaurant.repository.OrderRepository;
 @Service
 @RequiredArgsConstructor
 public class OrderService {
