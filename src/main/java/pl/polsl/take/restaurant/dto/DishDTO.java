@@ -1,16 +1,15 @@
-package pl.polsl.take.restaurant.model.DTOs;
+package pl.polsl.take.restaurant.dto;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.hateoas.RepresentationModel;
 
 import lombok.Getter;
-import lombok.Setter;
 import pl.polsl.take.restaurant.controller.DishController;
 import pl.polsl.take.restaurant.model.Dish;
-import pl.polsl.take.restaurant.model.RecipeItem;
 import pl.polsl.take.restaurant.model.enums.SpicinessLevel;
 
 @Getter
@@ -22,6 +21,8 @@ public class DishDTO extends RepresentationModel<DishDTO> {
     private Integer priceInCents;
     private Integer calories;
     private SpicinessLevel spiciness;
+
+    private List<RecipeItemResponseDTO> recipeItems;
     
     public DishDTO(Dish dish) {
 
@@ -31,6 +32,10 @@ public class DishDTO extends RepresentationModel<DishDTO> {
         this.priceInCents = dish.getPriceInCents();
         this.calories = dish.getCalories();
         this.spiciness = dish.getSpiciness();
+
+        this.recipeItems = dish.getRecipeItems().stream()
+                .map(RecipeItemResponseDTO::new)
+                .collect(Collectors.toList());
 
         add(linkTo(methodOn(DishController.class)
                 .get(dish.getId()))

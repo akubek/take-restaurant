@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
 import pl.polsl.take.restaurant.CustomerService;
+import pl.polsl.take.restaurant.dto.CreateCustomerDTO;
+import pl.polsl.take.restaurant.dto.CustomerDTO;
+import pl.polsl.take.restaurant.dto.OrderDTO;
 import pl.polsl.take.restaurant.model.Order;
-import pl.polsl.take.restaurant.model.DTOs.CreateCustomerDTO;
-import pl.polsl.take.restaurant.model.DTOs.CustomerDTO;
-import pl.polsl.take.restaurant.model.DTOs.OrderDTO;
 import pl.polsl.take.restaurant.model.enums.OrderItemStatus;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;

@@ -1,4 +1,4 @@
-package pl.polsl.take.restaurant.model.DTOs;
+package pl.polsl.take.restaurant.dto;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
@@ -6,13 +6,11 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 import org.springframework.hateoas.RepresentationModel;
 
 import lombok.Getter;
-import lombok.Setter;
 import pl.polsl.take.restaurant.controller.CustomerController;
 import pl.polsl.take.restaurant.model.Customer;
 
 @Getter
 public class CustomerDTO extends RepresentationModel<CustomerDTO> {
-
     private Long id;
     private String firstName;
     private String lastName;

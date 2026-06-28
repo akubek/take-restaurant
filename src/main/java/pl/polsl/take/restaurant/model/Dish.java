@@ -47,6 +47,9 @@ public class Dish {
     @OneToMany(mappedBy = "dish", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RecipeItem> recipeItems = new ArrayList<>();
 
+    @Setter
+    private Boolean isActive = true; // is the dish an active menu item
+
     public Dish(String name, String description, Integer priceInCents, Integer calories, SpicinessLevel spiciness) {
         this.name = name;
         this.description = description;

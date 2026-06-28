@@ -4,10 +4,10 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
+import pl.polsl.take.restaurant.dto.CreateDishDTO;
 import pl.polsl.take.restaurant.model.Dish;
 import pl.polsl.take.restaurant.model.Ingredient;
 import pl.polsl.take.restaurant.model.RecipeItem;
-import pl.polsl.take.restaurant.model.DTOs.CreateDishDTO;
 import pl.polsl.take.restaurant.repository.DishRepository;
 import pl.polsl.take.restaurant.repository.IngredientRepository;
 

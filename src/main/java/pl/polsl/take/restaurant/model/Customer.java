@@ -28,6 +28,7 @@ public class Customer {
     private String lastName;
     private String phoneNumber;
     private String email;
+    private boolean isActive = true; // is the customer active (not deleted)
 
     public Customer(String firstName, String lastName, String phoneNumber, String email)
     {

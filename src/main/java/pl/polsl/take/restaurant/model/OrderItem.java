@@ -38,7 +38,6 @@ public class OrderItem
     @Column(updatable = false)
     private Integer quantity;   //usually 1
 
-    @Column(updatable = false)
     private Integer seatNumber;
 
     private String notes;
