@@ -1,4 +1,4 @@
-package pl.polsl.take.restaurant;
+package pl.polsl.take.restaurant.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

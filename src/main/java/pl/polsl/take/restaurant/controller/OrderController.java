@@ -13,9 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
-import pl.polsl.take.restaurant.OrderService;
 import pl.polsl.take.restaurant.dto.CreateOrderDTO;
 import pl.polsl.take.restaurant.dto.OrderDTO;
+import pl.polsl.take.restaurant.service.OrderService;
 
 @RestController
 @RequestMapping("/orders")
