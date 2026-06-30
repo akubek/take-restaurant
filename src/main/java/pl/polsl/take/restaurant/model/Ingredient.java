@@ -45,8 +45,6 @@ public class Ingredient {
     @Column(name = "allergen")
     private Set<Allergen> allergens = new HashSet<>();
 
-    private boolean isActive = true; // is the ingredient active (can be added to new dishes)
-
     public Ingredient(String name, Boolean isVegan, Unit unit, Set<Allergen> allergens) {
         this.name = name;
         this.isVegan = isVegan;

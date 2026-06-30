@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import pl.polsl.take.restaurant.model.Order;
+import pl.polsl.take.restaurant.model.enums.OrderItemStatus;
 import pl.polsl.take.restaurant.model.enums.OrderStatus;
 
 
@@ -22,15 +23,33 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     boolean existsByOrderItemsDishId(Long dishId);
 
     // get client spending
-    @Query("SELECT SUM(oi.dishPriceAtOrderTime * oi.quantity) FROM Order o " +
-        "JOIN o.orderItems oi WHERE o.customer.id = :customerId " +
-        "AND o.status = pl.polsl.take.restaurant.model.enums.OrderStatus.PAID")
+    @Query("""
+        SELECT SUM(oi.dishPriceAtOrderTime * oi.quantity) 
+        FROM Order o JOIN o.orderItems oi 
+        WHERE o.customer.id = :customerId 
+        AND o.status = pl.polsl.take.restaurant.model.enums.OrderStatus.PAID 
+        AND oi.isCancelled = false
+    """)
     Optional<Long> sumCustomerSpending(@Param("customerId") Long customerId);
 
     // get revenue between two dates
-    @Query("SELECT SUM(oi.dishPriceAtOrderTime * oi.quantity) FROM Order o " +
-        "JOIN o.orderItems oi WHERE o.orderDateTime BETWEEN :from AND :to " +
-        "AND o.status = pl.polsl.take.restaurant.model.enums.OrderStatus.PAID")
+    @Query("""
+        SELECT SUM(oi.dishPriceAtOrderTime * oi.quantity) 
+        FROM Order o JOIN o.orderItems oi 
+        WHERE o.orderDateTime BETWEEN :from AND :to 
+        AND o.status = pl.polsl.take.restaurant.model.enums.OrderStatus.PAID 
+        AND oi.isCancelled = false
+    """)
     Optional<Long> sumRevenueBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    boolean existsByTableNumberAndStatusNotAndOrderDateTimeBetween(Integer tableNumber, OrderStatus status, LocalDateTime start, LocalDateTime end);
+
+    @Query("""
+        SELECT DISTINCT o FROM Order o JOIN o.orderItems oi 
+        WHERE o.status = pl.polsl.take.restaurant.model.enums.OrderStatus.OPEN 
+        AND oi.status IN :itemStatuses 
+        AND oi.isCancelled = false
+    """)
+    List<Order> findOrdersByItemStatuses(@Param("itemStatuses") List<OrderItemStatus> itemStatuses);
 }
 

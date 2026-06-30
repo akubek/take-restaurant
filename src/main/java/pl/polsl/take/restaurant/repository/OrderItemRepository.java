@@ -12,10 +12,12 @@ import pl.polsl.take.restaurant.model.OrderItem;
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
     @Query("""
-        SELECT oi.dish.id, SUM(oi.quantity)
-        FROM OrderItem oi
-        WHERE oi.order.orderDateTime BETWEEN :from AND :to
-        GROUP BY oi.dish.id
+        SELECT oi.dish.id, SUM(oi.quantity) 
+        FROM OrderItem oi 
+        WHERE oi.order.orderDateTime BETWEEN :from AND :to 
+        AND oi.isCancelled = false 
+        GROUP BY oi.dish.id 
+        ORDER BY SUM(oi.quantity) DESC
     """)
     List<Object[]> countDishOrders(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 }

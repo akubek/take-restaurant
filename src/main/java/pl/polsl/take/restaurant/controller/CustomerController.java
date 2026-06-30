@@ -1,63 +1,68 @@
 package pl.polsl.take.restaurant.controller;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 import java.util.List;
 
+import jakarta.validation.Valid;
 import org.springframework.hateoas.CollectionModel;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import lombok.RequiredArgsConstructor;
 import pl.polsl.take.restaurant.dto.CreateCustomerDTO;
 import pl.polsl.take.restaurant.dto.CustomerDTO;
 import pl.polsl.take.restaurant.dto.OrderDTO;
-import pl.polsl.take.restaurant.model.Order;
-import pl.polsl.take.restaurant.model.enums.OrderItemStatus;
+import pl.polsl.take.restaurant.dto.UpdateCustomerDTO;
 import pl.polsl.take.restaurant.service.CustomerService;
+import pl.polsl.take.restaurant.service.OrderService;
 
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RestController
 @RequestMapping("/customers")
 @RequiredArgsConstructor
 public class CustomerController {
 
-	private final CustomerService service;
-    @PostMapping
-    public CustomerDTO create(@RequestBody CreateCustomerDTO dto) {
-        return new CustomerDTO(service.createCustomer(dto));
-    }
-    
+    private final CustomerService customerService;
+    private final OrderService orderService;
+
     @GetMapping("/{id}")
     public CustomerDTO get(@PathVariable Long id) {
-        return new CustomerDTO(service.getById(id));
+        return customerService.getById(id);
     }
-    
-    @GetMapping("/{id}/orders")
-    public List<OrderDTO> orders(@PathVariable Long id) {
-        return service.getById(id)
-                .getOrders()
-                .stream()
-                .map(OrderDTO::new)
-                .toList();
-    }
-    
+
     @GetMapping
     public CollectionModel<CustomerDTO> getAll() {
+        List<CustomerDTO> customers = customerService.getAll();
+        return CollectionModel.of(customers, linkTo(methodOn(CustomerController.class).getAll()).withSelfRel());
+    }
 
-        List<CustomerDTO> orders = service.getAll()
-                .stream()
-                .map(CustomerDTO::new)
-                .toList();
+    @PostMapping
+    public CustomerDTO create(@Valid @RequestBody CreateCustomerDTO dto) {
+        return customerService.create(dto);
+    }
+
+    @PutMapping("/{id}")
+    public CustomerDTO update(@PathVariable Long id, @Valid @RequestBody UpdateCustomerDTO dto) {
+        return customerService.update(id, dto);
+    }
+
+    @DeleteMapping("/{id}")
+    public void anonymize(@PathVariable Long id) {
+        customerService.anonymize(id);
+    }
+
+    @GetMapping("/{id}/spending")
+    public Long getSpending(@PathVariable Long id) {
+        return customerService.getTotalSpending(id);
+    }
+
+    @GetMapping("/{id}/orders")
+    public CollectionModel<OrderDTO> orders(@PathVariable Long id) {
+        List<OrderDTO> orders = orderService.getByCustomerId(id);
 
         return CollectionModel.of(
-                orders,
-                linkTo(methodOn(CustomerController.class)
-                        .getAll())
-                        .withSelfRel()
+                orders, 
+                linkTo(methodOn(CustomerController.class).orders(id)).withSelfRel()
         );
     }
 }

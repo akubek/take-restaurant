@@ -42,7 +42,7 @@ public class DishDTO extends RepresentationModel<DishDTO> {
                 .withSelfRel());
 
         add(linkTo(methodOn(DishController.class)
-                .ingredients(dish.getId()))
+                .getIngredients(dish.getId()))
                 .withRel("ingredients"));
     }
 }

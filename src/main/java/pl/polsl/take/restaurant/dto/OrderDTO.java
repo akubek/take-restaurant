@@ -25,6 +25,8 @@ public class OrderDTO extends RepresentationModel<OrderDTO> {
 
     private CustomerDTO customer;
     private List<OrderItemDTO> items;
+
+    private Integer totalPriceCents;
     
     public OrderDTO(Order order) {
         this.id = order.getId();
@@ -44,13 +46,17 @@ public class OrderDTO extends RepresentationModel<OrderDTO> {
                 .map(OrderItemDTO::new)
                 .collect(Collectors.toList());
 
+        this.totalPriceCents = order.getOrderItems().stream()
+                .filter(item -> !item.getIsCancelled()) // only count non-cancelled items toward the total price
+                .mapToInt(item -> item.getDishPriceAtOrderTime() * item.getQuantity())
+                .sum();
 
         add(linkTo(methodOn(OrderController.class)
                 .getOrder(order.getId()))
                 .withSelfRel());
 
         add(linkTo(methodOn(OrderController.class)
-                .getItems(order.getId()))
+                .getOrderItems(order.getId()))
                 .withRel("items"));
     }
 }

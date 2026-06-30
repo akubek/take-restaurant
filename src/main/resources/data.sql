@@ -1,8 +1,7 @@
--- CUSTOMERS
-INSERT INTO customer (id, first_name, last_name, phone_number, email)
+INSERT INTO customer (id, first_name, last_name, phone_number, email, is_active)
 VALUES
-(1, 'Jan', 'Kowalski', '123456789', 'jan@example.com'),
-(2, 'Anna', 'Nowak', '987654321', 'anna@example.com');
+(1, 'Jan', 'Kowalski', '123456789', 'jan@example.com', true),
+(2, 'Anna', 'Nowak', '987654321', 'anna@example.com', true);
 
 -- DISHES
 INSERT INTO dish (id, name, description, price_in_cents, calories, spiciness)

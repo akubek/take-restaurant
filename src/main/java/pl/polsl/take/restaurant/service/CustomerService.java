@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import pl.polsl.take.restaurant.dto.CreateCustomerDTO;
 import pl.polsl.take.restaurant.dto.CustomerDTO;
+import pl.polsl.take.restaurant.dto.UpdateCustomerDTO;
 import pl.polsl.take.restaurant.model.Customer;
 import pl.polsl.take.restaurant.repository.CustomerRepository;
 import pl.polsl.take.restaurant.repository.OrderRepository;
@@ -44,7 +45,7 @@ public class CustomerService {
 	}
 
 	@Transactional
-	public CustomerDTO update(Long id, CreateCustomerDTO dto) {
+	public CustomerDTO update(Long id, UpdateCustomerDTO dto) {
 		Customer customer = findActiveById(id);
 		customer.setFirstName(dto.getFirstName());
 		customer.setLastName(dto.getLastName());
@@ -57,8 +58,8 @@ public class CustomerService {
 	@Transactional
 	public void anonymize(Long id) {
 		Customer customer = findActiveById(id);
-		customer.setFirstName(null);
-		customer.setLastName(null);
+		customer.setFirstName("Anonymized");
+		customer.setLastName("Removed");
 		customer.setPhoneNumber(null);
 		customer.setEmail(null);
 

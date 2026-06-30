@@ -55,4 +55,12 @@ public class Order {
         this.orderDateTime = LocalDateTime.now();
         this.status = OrderStatus.OPEN;
     }
+
+    // Constructor for reservations with a specific orderDateTime
+    public Order(Customer customer, Integer tableNumber, LocalDateTime orderDateTime) {
+        this.customer = customer;
+        this.tableNumber = tableNumber;
+        this.orderDateTime = orderDateTime;
+        this.status = OrderStatus.OPEN;
+    }
 }

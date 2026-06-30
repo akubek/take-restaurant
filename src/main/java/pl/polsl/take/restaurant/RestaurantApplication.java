@@ -1,4 +1,4 @@
-package pl.polsl.take.restaurant.service;
+package pl.polsl.take.restaurant;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

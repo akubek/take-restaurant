@@ -43,6 +43,10 @@ public class OrderItem
     private String notes;
 
     @Setter
+    @Getter
+    private Boolean isCancelled = false;
+
+    @Setter
     @Enumerated(EnumType.STRING)
     private OrderItemStatus status;
 

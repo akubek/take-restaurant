@@ -15,6 +15,7 @@ public class OrderItemDTO {
     private Integer seatNumber;
     private String notes;
     private OrderItemStatus status;
+    private Boolean isCancelled;
 
     public OrderItemDTO(OrderItem item) {
         this.id = item.getId();
@@ -25,5 +26,6 @@ public class OrderItemDTO {
         this.seatNumber = item.getSeatNumber();
         this.notes = item.getNotes();
         this.status = item.getStatus();
+        this.isCancelled = item.getIsCancelled();
     }
 }
