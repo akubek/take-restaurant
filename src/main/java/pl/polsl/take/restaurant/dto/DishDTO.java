@@ -7,6 +7,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.hateoas.RepresentationModel;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Getter;
 import pl.polsl.take.restaurant.controller.DishController;
 import pl.polsl.take.restaurant.model.Dish;
@@ -22,6 +24,7 @@ public class DishDTO extends RepresentationModel<DishDTO> {
     private Integer calories;
     private SpicinessLevel spiciness;
 
+    @JsonProperty("ingredients")
     private List<RecipeItemResponseDTO> recipeItems;
     
     public DishDTO(Dish dish) {

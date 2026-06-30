@@ -14,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,7 +32,10 @@ public class Ingredient {
     private Long id;
     
     @Setter
+    @NotBlank
+    @Column(name = "ingredient_name")
     private String name;
+
     @Setter
     private Boolean isVegan;
 

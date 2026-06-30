@@ -2,6 +2,8 @@ package pl.polsl.take.restaurant.dto;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -32,5 +34,6 @@ public class CreateDishDTO {
     private SpicinessLevel spiciness;
 
     @Valid
+    @JsonProperty("ingredients")
     private List<RecipeItemRequestDTO> ingredients;
 }

@@ -47,8 +47,9 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}")
-    public void anonymize(@PathVariable Long id) {
+    public CustomerDTO anonymize(@PathVariable Long id) {
         customerService.anonymize(id);
+        return customerService.getById(id);
     }
 
     @GetMapping("/{id}/spending")

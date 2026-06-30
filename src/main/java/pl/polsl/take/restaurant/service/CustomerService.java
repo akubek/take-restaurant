@@ -77,7 +77,7 @@ public class CustomerService {
  
 	private Customer findActiveById(Long id) {
         return customerRepo.findByIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new NotFoundException("Klient o id " + id + " nie istnieje"));
+                .orElseThrow(() -> new NotFoundException("Customer with ID " + id + " does not exist."));
     }
 
 }

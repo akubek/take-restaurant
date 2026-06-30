@@ -1,6 +1,9 @@
 package pl.polsl.take.restaurant.dto;
 
 import java.util.Set;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Getter;
 import pl.polsl.take.restaurant.model.Ingredient;
 import pl.polsl.take.restaurant.model.enums.Allergen;
@@ -12,6 +15,7 @@ public class IngredientDTO {
     private String name;
     private Boolean isVegan;
     private String unit;
+    @JsonProperty("allergens")
     private Set<Allergen> allergens;
 
     public IngredientDTO(Ingredient ingredient) {

@@ -57,6 +57,18 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
+    public OrderItemDTO getOrderItem(Long orderId, Long itemId) {
+        Order order = findOrderById(orderId);
+        OrderItem item = findOrderItemById(itemId);
+
+        if (!item.getOrder().getId().equals(order.getId())) {
+            throw new ConflictException("This item does not belong to the specified order.");
+        }
+
+        return new OrderItemDTO(item);
+    }
+
+    @Transactional(readOnly = true)
     public List<OrderDTO> getAll() {
         return orderRepo.findAll().stream()
                 .map(OrderDTO::new)
@@ -68,7 +80,7 @@ public class OrderService {
         Customer customer = null;
         if (dto.getCustomerId() != null) {
             customer = customerRepo.findByIdAndIsActiveTrue(dto.getCustomerId())
-                    .orElseThrow(() -> new NotFoundException("Klient nie istnieje."));
+                    .orElseThrow(() -> new NotFoundException("Client not found."));
         }
 
         Order order;
@@ -76,12 +88,12 @@ public class OrderService {
         // reservation
         if (dto.getOrderDateTime() != null) {
             if (customer == null) {
-                throw new ConflictException("Rezerwacja na przyszłość wymaga podania przypisanego klienta.");
+                throw new ConflictException("Future reservations require an assigned customer.");
             }
             
             // check if the reservation date is in the future
             if (dto.getOrderDateTime().isBefore(LocalDateTime.now())) {
-                throw new ConflictException("Data rezerwacji musi być w przyszłości.");
+                throw new ConflictException("Reservation date must be in the future.");
             }
 
             // check table availability for the requested time slot
@@ -232,17 +244,17 @@ public class OrderService {
 
     private Order findOrderById(Long id) {
         return orderRepo.findById(id)
-                .orElseThrow(() -> new NotFoundException("Zamówienie o ID " + id + " nie istnieje."));
+                .orElseThrow(() -> new NotFoundException("Order with ID " + id + " does not exist."));
     }
 
     private OrderItem findOrderItemById(Long id) {
         return orderItemRepo.findById(id)
-                .orElseThrow(() -> new NotFoundException("Pozycja zamówienia o ID " + id + " nie istnieje."));
+                .orElseThrow(() -> new NotFoundException("Order item with ID " + id + " does not exist."));
     }
 
     private Dish findActiveDish(Long id) {
         return dishRepo.findByIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new NotFoundException("Danie nie istnieje lub zostało wycofane z menu."));
+                .orElseThrow(() -> new NotFoundException("Dish with ID " + id + " does not exist or has been removed from the menu."));
     }
 
     private void checkTableAvailability(Integer tableNumber, LocalDateTime requestedTime, Long reservationMarginHours) {

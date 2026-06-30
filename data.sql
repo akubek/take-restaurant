@@ -39,6 +39,6 @@ VALUES
 
 -- ORDER ITEMS
 INSERT INTO order_item
-(id, order_id, dish_id, dish_price_at_order_time, quantity, seat_number, notes, status)
+(id, order_id, dish_id, dish_price_at_order_time, quantity, seat_number, notes, status, is_cancelled)
 VALUES
-(1, 1, 1, 3200, 2, 1, 'Extra cheese', 'NEW');
+(1, 1, 1, 3200, 2, 1, 'Extra cheese', 'NEW', false);

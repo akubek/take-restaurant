@@ -1,0 +1,33 @@
+### 1. Get all orders
+GET http://localhost:8080/orders
+
+### 2. Create reservation
+POST http://localhost:8080/orders
+Content-Type: application/json
+
+{
+  "customerId": 1,
+  "tableNumber": 5,
+  "items": [
+    { "dishId": 1, "quantity": 1, "seatNumber": 1 }
+  ],
+  "orderDateTime": "2026-08-01T15:00:00"
+}
+
+### 3. Pay for order (with undelivered or uncancelled items should throw an error 409)
+PATCH http://localhost:8080/orders/1/pay
+
+#### 4. Update order item status (to delivered)
+PATCH http://localhost:8080/orders/2/items/2/status
+Content-Type: application/json
+
+{
+    "status": "DELIVERED"
+}
+
+#### 5. Update order item status (to cancelled) by delete
+DELETE /orders/2/items/2
+
+### [404 NOT FOUND] test for non-existing order
+GET http://localhost:8080/orders/999999
+

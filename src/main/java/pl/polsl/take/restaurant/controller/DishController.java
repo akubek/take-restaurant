@@ -64,12 +64,14 @@ public class DishController {
     }
 
     @PatchMapping("/{id}/deactivate")
-    public void deactivateDish(@PathVariable Long id) {
+    public DishDTO deactivateDish(@PathVariable Long id) {
         service.deactivateDish(id);
+        return service.getById(id);
     }
 
     @PatchMapping("/{id}/reactivate")
-    public void reactivateDish(@PathVariable Long id) {
+    public DishDTO reactivateDish(@PathVariable Long id) {
         service.reactivateDish(id);
+        return service.getById(id);
     }
 }

@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.hateoas.RepresentationModel;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Getter;
 import pl.polsl.take.restaurant.controller.CustomerController;
 import pl.polsl.take.restaurant.controller.OrderController;
@@ -24,6 +26,7 @@ public class OrderDTO extends RepresentationModel<OrderDTO> {
     private OrderStatus status;
 
     private CustomerDTO customer;
+    @JsonProperty("items")
     private List<OrderItemDTO> items;
 
     private Integer totalPriceCents;

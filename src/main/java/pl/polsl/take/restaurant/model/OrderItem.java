@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -25,17 +26,21 @@ public class OrderItem
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id")
+    @JoinColumn(name = "order_id", nullable = false, updatable = false)
+    @NotNull
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "dish_id", updatable = false) // cannot change dish in order item - item should be cancelled and reordered instead
+    @JoinColumn(name = "dish_id", updatable = false, nullable = false) // cannot change dish in order item - item should be cancelled and reordered instead
+    @NotNull
     private Dish dish;
 
-    @Column(updatable = false)
+    @NotNull
+    @Column(updatable = false, nullable = false)
     private Integer dishPriceAtOrderTime;   //save dish price at order
 
-    @Column(updatable = false)
+    @NotNull
+    @Column(updatable = false, nullable = false)
     private Integer quantity;   //usually 1
 
     private Integer seatNumber;
@@ -44,10 +49,14 @@ public class OrderItem
 
     @Setter
     @Getter
+    @NotNull
+    @Column(nullable = false)
     private Boolean isCancelled = false;
 
     @Setter
     @Enumerated(EnumType.STRING)
+    @NotNull
+    @Column(nullable = false, name = "order_item_status")
     private OrderItemStatus status;
 
     //constructor for order item (not every field has setter)

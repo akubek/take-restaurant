@@ -63,12 +63,13 @@ public class OrderController {
     }
 
     @PatchMapping("/{orderId}/items/{itemId}/status")
-    public void updateItemStatus(
+    public OrderItemDTO updateItemStatus(
             @PathVariable Long orderId, 
             @PathVariable Long itemId, 
             @Valid @RequestBody pl.polsl.take.restaurant.dto.UpdateOrderItemStatusDTO dto) {
         
         service.updateItemStatus(orderId, itemId, dto.getStatus());
+        return service.getOrderItem(orderId, itemId);
     }
 
     @DeleteMapping("/{orderId}/items/{itemId}")

@@ -17,6 +17,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -36,7 +37,8 @@ public class Order {
     @JoinColumn(name = "customer_id", updatable = false)
     private Customer customer;
 
-    @Column(updatable = false)
+    @Column(updatable = false, nullable = false)
+    @NotNull
     private LocalDateTime orderDateTime;
     
     @Setter
@@ -44,6 +46,8 @@ public class Order {
 
     @Setter
     @Enumerated(EnumType.STRING)
+    @NotNull
+    @Column(nullable = false, name = "order_status")
     private OrderStatus status;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)

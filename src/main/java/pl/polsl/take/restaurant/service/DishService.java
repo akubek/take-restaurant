@@ -138,14 +138,14 @@ public class DishService {
 
     @Transactional
     public void deactivateDish(Long id) {
-        Dish dish = dishRepo.findById(id).orElseThrow(() -> new NotFoundException("Danie o ID " + id + " nie istnieje."));
+        Dish dish = dishRepo.findById(id).orElseThrow(() -> new NotFoundException("Dish with ID " + id + " does not exist."));
         dish.setIsActive(false);
         dishRepo.save(dish);
     }
 
     @Transactional
     public void reactivateDish(Long id) {
-        Dish dish = dishRepo.findById(id).orElseThrow(() -> new NotFoundException("Danie o ID " + id + " nie istnieje."));
+        Dish dish = dishRepo.findById(id).orElseThrow(() -> new NotFoundException("Dish with ID " + id + " does not exist."));
         dish.setIsActive(true);
         dishRepo.save(dish);
     }
@@ -154,6 +154,6 @@ public class DishService {
     // throws NotFoundException if not found
     private Dish findActiveById(Long id) {
         return dishRepo.findByIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new NotFoundException("Dish with id " + id + " does not exist or has been removed from the menu"));
+                .orElseThrow(() -> new NotFoundException("Dish with ID " + id + " does not exist or has been removed from the menu."));
     }
 }

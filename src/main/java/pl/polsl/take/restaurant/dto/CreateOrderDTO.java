@@ -3,6 +3,8 @@ package pl.polsl.take.restaurant.dto;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotEmpty;
@@ -20,6 +22,7 @@ public class CreateOrderDTO {
 
     @NotEmpty
     @Valid
+    @JsonProperty("items")
     private List<CreateOrderItemDTO> items;
 
     @Future

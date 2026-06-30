@@ -1,0 +1,10 @@
+### [400 BAD REQUEST] Test for creating a customer with an empty first name
+POST http://localhost:8080/customers
+Content-Type: application/json
+
+{
+  "firstName": "", 
+  "lastName": "Nowak",
+  "phoneNumber": "123456789",
+  "email": "nowak@example.com"
+}

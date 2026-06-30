@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,15 +23,18 @@ public class RecipeItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(updatable = false)
+    @NotNull
+    @Column(updatable = false, nullable = false)
     private Double amount;
 
+    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ingredient_id",updatable = false)
+    @JoinColumn(name = "ingredient_id",updatable = false, nullable = false)
     private Ingredient ingredient;
 
+    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "dish_id", updatable = false)
+    @JoinColumn(name = "dish_id", updatable = false, nullable = false)
     private Dish dish;
 
     public RecipeItem(Dish dish, Ingredient ingredient, Double amount) {
