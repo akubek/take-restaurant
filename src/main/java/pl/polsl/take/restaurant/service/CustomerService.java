@@ -3,13 +3,15 @@ package pl.polsl.take.restaurant.service;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import pl.polsl.take.restaurant.dto.CreateCustomerDTO;
+import pl.polsl.take.restaurant.dto.CustomerDTO;
 import pl.polsl.take.restaurant.model.Customer;
-import pl.polsl.take.restaurant.model.Order;
 import pl.polsl.take.restaurant.repository.CustomerRepository;
 import pl.polsl.take.restaurant.repository.OrderRepository;
+import pl.polsl.take.restaurant.exception.NotFoundException;
 
 @Service
 @RequiredArgsConstructor
@@ -18,21 +20,63 @@ public class CustomerService {
 	private final OrderRepository orderRepo;
 	private final CustomerRepository customerRepo;
 
-	public Customer getById(Long id) {
-		return customerRepo.findById(id)
-				.orElseThrow(() -> new RuntimeException("Customer not found"));
+	@Transactional(readOnly = true)
+	public CustomerDTO getById(Long id) {
+		return new CustomerDTO(findActiveById(id));
+	}
+
+	@Transactional(readOnly = true)
+	public List<CustomerDTO> getAll() {
+		return customerRepo.findAllByIsActiveTrue()
+				.stream()
+				.map(CustomerDTO::new)
+				.toList();
 	}
 	
-	public Customer createCustomer(CreateCustomerDTO dto)
+	@Transactional
+	public CustomerDTO create(CreateCustomerDTO dto)
 	{
 		Customer customer = new Customer(
 				dto.getFirstName(), dto.getLastName(),
 				dto.getPhoneNumber(), dto.getEmail());
 		
-		return customerRepo.save(customer);
+		return new CustomerDTO(customerRepo.save(customer));
 	}
-	
-	public List<Customer> getAll() {
-		return customerRepo.findAll();
+
+	@Transactional
+	public CustomerDTO update(Long id, CreateCustomerDTO dto) {
+		Customer customer = findActiveById(id);
+		customer.setFirstName(dto.getFirstName());
+		customer.setLastName(dto.getLastName());
+		customer.setPhoneNumber(dto.getPhoneNumber());
+		customer.setEmail(dto.getEmail());
+
+		return new CustomerDTO(customerRepo.save(customer));
 	}
+
+	@Transactional
+	public void anonymize(Long id) {
+		Customer customer = findActiveById(id);
+		customer.setFirstName(null);
+		customer.setLastName(null);
+		customer.setPhoneNumber(null);
+		customer.setEmail(null);
+
+		customer.setActive(false);
+
+		customerRepo.save(customer);
+	}
+
+	@Transactional(readOnly = true)
+    public Long getTotalSpending(Long id) {
+        findActiveById(id);
+ 
+        return orderRepo.sumCustomerSpending(id).orElse(0L);
+    }
+ 
+	private Customer findActiveById(Long id) {
+        return customerRepo.findByIdAndIsActiveTrue(id)
+                .orElseThrow(() -> new NotFoundException("Klient o id " + id + " nie istnieje"));
+    }
+
 }
