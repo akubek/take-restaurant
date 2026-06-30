@@ -1,5 +1,8 @@
 package pl.polsl.take.restaurant.model.enums;
 
+import lombok.Getter;
+
+@Getter
 public enum Unit {
     GRAM("g"),
     DECAGRAM("dag"),

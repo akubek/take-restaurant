@@ -21,7 +21,7 @@ import lombok.Setter;
 @Table(name = "customer")
 @Getter
 @Setter
-@NoArgsConstructor
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
