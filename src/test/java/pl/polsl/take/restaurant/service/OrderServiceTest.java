@@ -12,6 +12,7 @@ import pl.polsl.take.restaurant.dto.CreateOrderDTO;
 import pl.polsl.take.restaurant.dto.CreateOrderItemDTO;
 import pl.polsl.take.restaurant.dto.OrderDTO;
 import pl.polsl.take.restaurant.exception.ConflictException;
+import pl.polsl.take.restaurant.exception.NotFoundException;
 import pl.polsl.take.restaurant.model.Customer;
 import pl.polsl.take.restaurant.model.Dish;
 import pl.polsl.take.restaurant.model.Order;
@@ -21,6 +22,7 @@ import pl.polsl.take.restaurant.model.enums.OrderStatus;
 import pl.polsl.take.restaurant.model.enums.SpicinessLevel;
 import pl.polsl.take.restaurant.repository.CustomerRepository;
 import pl.polsl.take.restaurant.repository.DishRepository;
+import pl.polsl.take.restaurant.repository.OrderItemRepository;
 import pl.polsl.take.restaurant.repository.OrderRepository;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -28,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,6 +48,9 @@ class OrderServiceTest {
     @Mock
     private DishRepository dishRepository;
 
+    @Mock
+    private OrderItemRepository orderItemRepository;
+
     // inject order service with the mocked repository
     @InjectMocks
     private OrderService orderService;
@@ -54,101 +60,279 @@ class OrderServiceTest {
     private ArgumentCaptor<Order> orderCaptor;
 
 
-    //TEST 1: Paying for an order that is still OPEN should throw a ConflictException
+    // -------------------------------------------------------------------------
+    // payOrder
+    // -------------------------------------------------------------------------
+ 
     @Test
-    void shouldThrowConflictExceptionWhenPayingForNewOrder() {
-        // Given mock order with status OPEN
-        Order mockOrder = mock(Order.class);
-        //when(mockOrder.getId()).thenReturn(1L);
-        when(mockOrder.getStatus()).thenReturn(OrderStatus.OPEN);
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(mockOrder));
-
-        // When pay order with id 1 & Then expect ConflictException to be thrown
-        assertThrows(ConflictException.class, () -> {
-            orderService.payOrder(1L);
-        });
-        
-        // Optionally: Verify that the service did NOT attempt to save the order to the repository
-        verify(orderRepository, never()).save(any(Order.class));
+    void shouldThrowWhenPayingOrderWithStatusNew() {
+        // Given - zamówienie OPEN (domyślny status)
+        Order order = new Order(null, 1);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+ 
+        // When / Then
+        assertThrows(ConflictException.class, () -> orderService.payOrder(1L));
+        verify(orderRepository, never()).save(any());
     }
-
-    // TEST 2: Paying for an order that is OPEN and has all items DELIVERED should succeed and change the order status to PAID
+ 
+    @Test
+    void shouldThrowWhenPayingAlreadyPaidOrder() {
+        Order order = new Order(null, 1);
+        order.setStatus(OrderStatus.PAID);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+ 
+        assertThrows(ConflictException.class, () -> orderService.payOrder(1L));
+    }
+ 
+    @Test
+    void shouldThrowWhenPayingCancelledOrder() {
+        Order order = new Order(null, 1);
+        order.setStatus(OrderStatus.CANCELLED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+ 
+        assertThrows(ConflictException.class, () -> orderService.payOrder(1L));
+    }
+ 
+    @Test
+    void shouldThrowWhenPayingOrderWithAllItemsCancelled() {
+        // Given - zamówienie z jedną pozycją, ale pozycja anulowana → brak ważnych items
+        Dish dish = new Dish("Pizza", "", 3200, 500, SpicinessLevel.MILD);
+        Order order = new Order(null, 1);
+        OrderItem cancelledItem = new OrderItem(dish, 1, 1, null, order);
+        cancelledItem.setIsCancelled(true);
+        order.getOrderItems().add(cancelledItem);
+ 
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+ 
+        // When / Then - brak ważnych pozycji → nie można zapłacić
+        assertThrows(ConflictException.class, () -> orderService.payOrder(1L));
+    }
+ 
+    @Test
+    void shouldThrowWhenPayingOrderWithItemsNotDelivered() {
+        // Given - pozycja ma status NEW (nie DELIVERED) → kuchnia jej nie dostarczyła
+        Dish dish = new Dish("Pizza", "", 3200, 500, SpicinessLevel.MILD);
+        Order order = new Order(null, 1);
+        OrderItem pendingItem = new OrderItem(dish, 1, 1, null, order);
+        // status domyślny to NEW
+        order.getOrderItems().add(pendingItem);
+ 
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+ 
+        assertThrows(ConflictException.class, () -> orderService.payOrder(1L));
+    }
+ 
     @Test
     void shouldSuccessfullyPayOrderWhenAllItemsDelivered() {
-        // Given order with all items DELIVERED
-        Dish realDish = new Dish( "Test Dish", "", 99, 100, SpicinessLevel.MILD);
-
-        Order realOrder = new Order(null, 5);
-        ReflectionTestUtils.setField(realOrder, "id", 1L);
-
-        OrderItem realItem = new OrderItem(realDish, 1, 1, "Test notes", realOrder);
-        realItem.setStatus(OrderItemStatus.DELIVERED);
-        
-        realOrder.getOrderItems().add(realItem);
-
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(realOrder));
-        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArguments()[0]);
-
-        // When order is paid for
-        orderService.payOrder(1L);
-
-        // Then the order status should be updated to PAID and saved
-        assertEquals(OrderStatus.PAID, realOrder.getStatus());
-        verify(orderRepository).save(realOrder);
+        // Given
+        Dish dish = new Dish("Pizza", "", 3200, 500, SpicinessLevel.MILD);
+        Order order = new Order(null, 1);
+        ReflectionTestUtils.setField(order, "id", 1L);
+ 
+        OrderItem item = new OrderItem(dish, 2, 1, null, order);
+        item.setStatus(OrderItemStatus.DELIVERED);
+        order.getOrderItems().add(item);
+ 
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+ 
+        // When
+        OrderDTO result = orderService.payOrder(1L);
+ 
+        // Then
+        assertEquals(OrderStatus.PAID, order.getStatus());
+        assertEquals(6400, result.getTotalPriceCents()); // 2 * 3200
+        verify(orderRepository).save(order);
     }
 
+    // -------------------------------------------------------------------------
+    // cancelOrder
+    // -------------------------------------------------------------------------
+ 
+    @Test
+    void shouldCancelOpenOrderAndAllItsItems() {
+        // Given
+        Dish dish = new Dish("Pizza", "", 1000, 500, SpicinessLevel.MILD);
+        Order order = new Order(null, 1);
+        OrderItem item1 = new OrderItem(dish, 1, 1, null, order);
+        OrderItem item2 = new OrderItem(dish, 1, 2, null, order);
+        order.getOrderItems().addAll(List.of(item1, item2));
+ 
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+ 
+        // When
+        orderService.cancelOrder(1L);
+ 
+        // Then - zamówienie i wszystkie pozycje anulowane
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+        assertTrue(item1.getIsCancelled());
+        assertTrue(item2.getIsCancelled());
+        verify(orderRepository).save(order);
+    }
+ 
+    @Test
+    void shouldThrowWhenCancellingAlreadyPaidOrder() {
+        Order order = new Order(null, 1);
+        order.setStatus(OrderStatus.PAID);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+ 
+        assertThrows(ConflictException.class, () -> orderService.cancelOrder(1L));
+        verify(orderRepository, never()).save(any());
+    }
+
+    // -------------------------------------------------------------------------
+    // addItemToOrder
+    // -------------------------------------------------------------------------
+ 
+    @Test
+    void shouldThrowWhenAddingItemToClosedOrder() {
+        Order order = new Order(null, 1);
+        order.setStatus(OrderStatus.PAID);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+ 
+        CreateOrderItemDTO dto = new CreateOrderItemDTO();
+        dto.setDishId(1L);
+        dto.setQuantity(1);
+ 
+        assertThrows(ConflictException.class, () -> orderService.addItemToOrder(1L, dto));
+        verify(orderItemRepository, never()).save(any());
+    }
+ 
+    @Test
+    void shouldThrowWhenAddingItemToCancelledOrder() {
+        Order order = new Order(null, 1);
+        order.setStatus(OrderStatus.CANCELLED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+ 
+        CreateOrderItemDTO dto = new CreateOrderItemDTO();
+        dto.setDishId(1L);
+        dto.setQuantity(1);
+ 
+        assertThrows(ConflictException.class, () -> orderService.addItemToOrder(1L, dto));
+    }
+ 
+    // -------------------------------------------------------------------------
+    // cancelOrderItem
+    // -------------------------------------------------------------------------
+ 
+    @Test
+    void shouldThrowWhenCancellingItemInPaidOrder() {
+        Dish dish = new Dish("Pizza", "", 1000, 500, SpicinessLevel.MILD);
+        Order order = new Order(null, 1);
+        ReflectionTestUtils.setField(order, "id", 1L);
+        order.setStatus(OrderStatus.PAID);
+ 
+        OrderItem item = new OrderItem(dish, 1, 1, null, order);
+        ReflectionTestUtils.setField(item, "id", 10L);
+ 
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+ 
+        assertThrows(ConflictException.class, () -> orderService.cancelOrderItem(1L, 10L));
+        verify(orderItemRepository, never()).save(any());
+    }
+ 
+    // -------------------------------------------------------------------------
+    // create - rezerwacje
+    // -------------------------------------------------------------------------
+ 
+    @Test
+    void shouldThrowWhenCreatingReservationWithoutCustomer() {
+        // Given - rezerwacja na przyszłość bez klienta (anonimowe rezerwacje są zabronione)
+        CreateOrderItemDTO itemDto = new CreateOrderItemDTO();
+        itemDto.setDishId(1L);
+        itemDto.setQuantity(1);
+ 
+        CreateOrderDTO dto = new CreateOrderDTO();
+        dto.setCustomerId(null);
+        dto.setTableNumber(1);
+        dto.setOrderDateTime(LocalDateTime.now().plusDays(1));
+        dto.setItems(List.of(itemDto));
+ 
+        // When / Then
+        assertThrows(ConflictException.class, () -> orderService.create(dto));
+    }
+ 
+    @Test
+    void shouldThrowWhenTableAlreadyReserved() {
+        // Given - stolik zajęty w danym przedziale czasowym
+        Customer customer = new Customer("Jan", "Kowalski", "123", "jan@test.com");
+        ReflectionTestUtils.setField(customer, "id", 1L);
+ 
+        when(customerRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(customer));
+        when(orderRepository.existsByTableNumberAndStatusNotAndOrderDateTimeBetween(
+                any(), any(), any(), any())).thenReturn(true);
+ 
+        CreateOrderItemDTO itemDto = new CreateOrderItemDTO();
+        itemDto.setDishId(1L);
+        itemDto.setQuantity(1);
+ 
+        CreateOrderDTO dto = new CreateOrderDTO();
+        dto.setCustomerId(1L);
+        dto.setTableNumber(5);
+        dto.setOrderDateTime(LocalDateTime.now().plusDays(1));
+        dto.setItems(List.of(itemDto));
+ 
+        // When / Then
+        assertThrows(ConflictException.class, () -> orderService.create(dto));
+    }
+ 
+    // -------------------------------------------------------------------------
+    // create - happy path (rozszerzenie istniejącego testu)
+    // -------------------------------------------------------------------------
+ 
     @Test
     void shouldCreateOrderAndCalculateTotalCorrectly() {
         // Given
-        // client with id 1
-        Customer realCustomer = new Customer("Jan", "Kowalski", "123456789", "jan.kowalski@example.com");
-        ReflectionTestUtils.setField(realCustomer, "id", 1L);
-
-        // dish with price 32.00 ( 3200 in cents), id 1
-        Dish realDish = new Dish("Pizza Margherita", "Opis", 3200, 1000, SpicinessLevel.MILD);
-        ReflectionTestUtils.setField(realDish, "id", 1L);
-
-        when(customerRepository.findByIdAndIsActiveTrue(anyLong()))
-            .thenReturn(Optional.of(realCustomer));
-
-        when(dishRepository.findByIdAndIsActiveTrue(anyLong()))
-            .thenReturn(Optional.of(realDish));
-
-        // 'save' method for order repository should return the order with an ID set (simulating database behavior)
+        Customer customer = new Customer("Jan", "Kowalski", "123456789", "jan.kowalski@example.com");
+        ReflectionTestUtils.setField(customer, "id", 1L);
+ 
+        Dish dish = new Dish("Pizza Margherita", "Opis", 3200, 1000, SpicinessLevel.MILD);
+        ReflectionTestUtils.setField(dish, "id", 1L);
+ 
+        when(customerRepository.findByIdAndIsActiveTrue(anyLong())).thenReturn(Optional.of(customer));
+        when(dishRepository.findByIdAndIsActiveTrue(anyLong())).thenReturn(Optional.of(dish));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
-            Order orderToSave = invocation.getArgument(0);
-            ReflectionTestUtils.setField(orderToSave, "id", 99L);
-            return orderToSave;
+            Order o = invocation.getArgument(0);
+            ReflectionTestUtils.setField(o, "id", 99L);
+            return o;
         });
-
-        // Test user input DTO
+ 
         CreateOrderItemDTO itemDto = new CreateOrderItemDTO();
         itemDto.setDishId(1L);
         itemDto.setQuantity(2);
         itemDto.setSeatNumber(1);
-
+ 
         CreateOrderDTO orderDto = new CreateOrderDTO();
         orderDto.setCustomerId(1L);
         orderDto.setTableNumber(5);
         orderDto.setItems(List.of(itemDto));
-
+ 
         // When
         OrderDTO result = orderService.create(orderDto);
-
+ 
         // Then
-        // check that the order was saved with the correct properties
         verify(orderRepository).save(orderCaptor.capture());
-        Order savedOrder = orderCaptor.getValue();
-
-        assertEquals(OrderStatus.OPEN, savedOrder.getStatus());
-        assertEquals(5, savedOrder.getTableNumber());
-        assertEquals(1, savedOrder.getOrderItems().size());
-        assertEquals(2, savedOrder.getOrderItems().get(0).getQuantity());
-        assertEquals(realCustomer, savedOrder.getCustomer()); // Ensure the customer is assigned
-
-        // check output DTO and total price calculation
+        Order saved = orderCaptor.getValue();
+ 
+        assertEquals(OrderStatus.OPEN, saved.getStatus());
+        assertEquals(5, saved.getTableNumber());
+        assertEquals(1, saved.getOrderItems().size());
+        assertEquals(2, saved.getOrderItems().get(0).getQuantity());
+        assertEquals(customer, saved.getCustomer());
+ 
         assertNotNull(result);
-        assertEquals(99L, result.getId(), "DTO should have the same ID as the saved order");
-        assertEquals(6400, result.getTotalPriceCents(), "2 x 3200 cents should equal 6400");
+        assertEquals(99L, result.getId());
+        assertEquals(6400, result.getTotalPriceCents()); // 2 * 3200
     }
+ 
+    @Test
+    void shouldThrowNotFoundWhenOrderDoesNotExist() {
+        when(orderRepository.findById(99L)).thenReturn(Optional.empty());
+ 
+        assertThrows(NotFoundException.class, () -> orderService.getById(99L));
+    }
+
+
 }
