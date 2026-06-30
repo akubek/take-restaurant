@@ -334,5 +334,254 @@ class OrderServiceTest {
         assertThrows(NotFoundException.class, () -> orderService.getById(99L));
     }
 
+    // -------------------------------------------------------------------------
+    // addItemToOrder - happy path
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldSuccessfullyAddItemToOpenOrder() {
+        // Given
+        Dish dish = new Dish("Burger", "", 2500, 700, SpicinessLevel.MILD);
+        ReflectionTestUtils.setField(dish, "id", 1L);
+
+        Order order = new Order(null, 1);
+        ReflectionTestUtils.setField(order, "id", 1L);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(dishRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(dish));
+        when(orderItemRepository.save(any(OrderItem.class))).thenAnswer(i -> i.getArgument(0));
+
+        CreateOrderItemDTO dto = new CreateOrderItemDTO();
+        dto.setDishId(1L);
+        dto.setQuantity(2);
+        dto.setSeatNumber(3);
+
+        // When
+        OrderDTO result = orderService.addItemToOrder(1L, dto);
+
+        // Then
+        assertEquals(1, order.getOrderItems().size());
+        OrderItem added = order.getOrderItems().get(0);
+        assertEquals(dish, added.getDish());
+        assertEquals(2, added.getQuantity());
+        assertEquals(3, added.getSeatNumber());
+        verify(orderItemRepository).save(any(OrderItem.class));
+        assertNotNull(result);
+    }
+
+    // -------------------------------------------------------------------------
+    // getOrderItems / getOrderItem
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldReturnAllOrderItemsForOrder() {
+        // Given
+        Dish dish = new Dish("Pizza", "", 3200, 500, SpicinessLevel.MILD);
+        Order order = new Order(null, 1);
+        ReflectionTestUtils.setField(order, "id", 1L);
+
+        OrderItem item1 = new OrderItem(dish, 1, 1, null, order);
+        OrderItem item2 = new OrderItem(dish, 2, 2, "extra cheese", order);
+        order.getOrderItems().addAll(List.of(item1, item2));
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        // When
+        var result = orderService.getOrderItems(1L);
+
+        // Then
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    void shouldReturnSingleOrderItemSuccessfully() {
+        // Given
+        Dish dish = new Dish("Pizza", "", 3200, 500, SpicinessLevel.MILD);
+        Order order = new Order(null, 1);
+        ReflectionTestUtils.setField(order, "id", 1L);
+
+        OrderItem item = new OrderItem(dish, 1, 1, "bez soli", order);
+        ReflectionTestUtils.setField(item, "id", 10L);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+
+        // When
+        var result = orderService.getOrderItem(1L, 10L);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(10L, result.getId());
+        assertEquals("bez soli", result.getNotes());
+    }
+
+    @Test
+    void shouldThrowConflictWhenOrderItemBelongsToDifferentOrder() {
+        // Given - pozycja należy do zamówienia 2, ale pytamy w kontekście zamówienia 1
+        Dish dish = new Dish("Pizza", "", 3200, 500, SpicinessLevel.MILD);
+
+        Order order1 = new Order(null, 1);
+        ReflectionTestUtils.setField(order1, "id", 1L);
+
+        Order order2 = new Order(null, 2);
+        ReflectionTestUtils.setField(order2, "id", 2L);
+
+        OrderItem item = new OrderItem(dish, 1, 1, null, order2); // należy do zamówienia 2
+        ReflectionTestUtils.setField(item, "id", 10L);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order1));
+        when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+
+        // When / Then
+        assertThrows(ConflictException.class, () -> orderService.getOrderItem(1L, 10L));
+    }
+
+    // -------------------------------------------------------------------------
+    // updateItemStatus
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldUpdateItemStatusSuccessfully() {
+        // Given
+        Dish dish = new Dish("Pizza", "", 3200, 500, SpicinessLevel.MILD);
+        Order order = new Order(null, 1);
+        ReflectionTestUtils.setField(order, "id", 1L);
+
+        OrderItem item = new OrderItem(dish, 1, 1, null, order);
+        ReflectionTestUtils.setField(item, "id", 10L);
+        // status domyślny: NEW
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+
+        // When
+        orderService.updateItemStatus(1L, 10L, OrderItemStatus.PREPARING);
+
+        // Then
+        assertEquals(OrderItemStatus.PREPARING, item.getStatus());
+        verify(orderItemRepository).save(item);
+    }
+
+    @Test
+    void shouldThrowWhenUpdatingItemStatusAndItemBelongsToDifferentOrder() {
+        // Given
+        Dish dish = new Dish("Pizza", "", 3200, 500, SpicinessLevel.MILD);
+
+        Order order1 = new Order(null, 1);
+        ReflectionTestUtils.setField(order1, "id", 1L);
+
+        Order order2 = new Order(null, 2);
+        ReflectionTestUtils.setField(order2, "id", 2L);
+
+        OrderItem item = new OrderItem(dish, 1, 1, null, order2); // należy do zamówienia 2
+        ReflectionTestUtils.setField(item, "id", 10L);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order1));
+        when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+
+        assertThrows(ConflictException.class, () -> orderService.updateItemStatus(1L, 10L, OrderItemStatus.PREPARING));
+        verify(orderItemRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldThrowWhenUpdatingItemStatusInPaidOrder() {
+        // Given - zamówienie opłacone → statusów pozycji nie można zmieniać
+        Dish dish = new Dish("Pizza", "", 3200, 500, SpicinessLevel.MILD);
+        Order order = new Order(null, 1);
+        ReflectionTestUtils.setField(order, "id", 1L);
+        order.setStatus(OrderStatus.PAID);
+
+        OrderItem item = new OrderItem(dish, 1, 1, null, order);
+        ReflectionTestUtils.setField(item, "id", 10L);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+
+        assertThrows(ConflictException.class, () -> orderService.updateItemStatus(1L, 10L, OrderItemStatus.PREPARING));
+        verify(orderItemRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldThrowWhenUpdatingItemStatusInCancelledOrder() {
+        // Given - zamówienie anulowane → statusów pozycji nie można zmieniać
+        Dish dish = new Dish("Pizza", "", 3200, 500, SpicinessLevel.MILD);
+        Order order = new Order(null, 1);
+        ReflectionTestUtils.setField(order, "id", 1L);
+        order.setStatus(OrderStatus.CANCELLED);
+
+        OrderItem item = new OrderItem(dish, 1, 1, null, order);
+        ReflectionTestUtils.setField(item, "id", 10L);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+
+        assertThrows(ConflictException.class, () -> orderService.updateItemStatus(1L, 10L, OrderItemStatus.PREPARING));
+        verify(orderItemRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldThrowWhenUpdatingStatusOfAlreadyCancelledItem() {
+        // Given - sama pozycja jest anulowana (np. klient zmienił zdanie)
+        Dish dish = new Dish("Pizza", "", 3200, 500, SpicinessLevel.MILD);
+        Order order = new Order(null, 1); // zamówienie OPEN
+        ReflectionTestUtils.setField(order, "id", 1L);
+
+        OrderItem item = new OrderItem(dish, 1, 1, null, order);
+        ReflectionTestUtils.setField(item, "id", 10L);
+        item.setIsCancelled(true); // pozycja anulowana
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+
+        assertThrows(ConflictException.class, () -> orderService.updateItemStatus(1L, 10L, OrderItemStatus.PREPARING));
+        verify(orderItemRepository, never()).save(any());
+    }
+
+    // -------------------------------------------------------------------------
+    // cancelOrderItem - happy path & mismatch
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldSuccessfullyCancelOrderItem() {
+        // Given
+        Dish dish = new Dish("Pizza", "", 3200, 500, SpicinessLevel.MILD);
+        Order order = new Order(null, 1);
+        ReflectionTestUtils.setField(order, "id", 1L);
+
+        OrderItem item = new OrderItem(dish, 1, 1, null, order);
+        ReflectionTestUtils.setField(item, "id", 10L);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+
+        // When
+        orderService.cancelOrderItem(1L, 10L);
+
+        // Then
+        assertTrue(item.getIsCancelled());
+        verify(orderItemRepository).save(item);
+    }
+
+    @Test
+    void shouldThrowWhenCancellingItemFromDifferentOrder() {
+        // Given
+        Dish dish = new Dish("Pizza", "", 3200, 500, SpicinessLevel.MILD);
+
+        Order order1 = new Order(null, 1);
+        ReflectionTestUtils.setField(order1, "id", 1L);
+
+        Order order2 = new Order(null, 2);
+        ReflectionTestUtils.setField(order2, "id", 2L);
+
+        OrderItem item = new OrderItem(dish, 1, 1, null, order2); // należy do zamówienia 2
+        ReflectionTestUtils.setField(item, "id", 10L);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order1));
+        when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+
+        // When / Then
+        assertThrows(ConflictException.class, () -> orderService.cancelOrderItem(1L, 10L));
+        verify(orderItemRepository, never()).save(any());
+    }
 
 }
