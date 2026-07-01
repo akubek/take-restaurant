@@ -7,6 +7,7 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 import org.springframework.hateoas.CollectionModel;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import lombok.RequiredArgsConstructor;
@@ -47,9 +48,9 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}")
-    public CustomerDTO anonymize(@PathVariable Long id) {
+    public ResponseEntity<Void> anonymize(@PathVariable Long id) {
         customerService.anonymize(id);
-        return customerService.getById(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/spending")

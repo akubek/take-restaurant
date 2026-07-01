@@ -177,9 +177,9 @@ class CustomerControllerTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void anonymize_shouldReturn200WhenCustomerExists() throws Exception {
+    void anonymize_shouldReturn204WhenCustomerExists() throws Exception {
         mockMvc.perform(delete("/customers/1"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         verify(customerService).anonymize(1L);
     }
