@@ -20,8 +20,10 @@ import pl.polsl.take.restaurant.model.enums.OrderItemStatus;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class OrderItem
- {
+/**
+ * Single line item within an order.
+ */
+public class OrderItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -32,17 +34,20 @@ public class OrderItem
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "dish_id", updatable = false, nullable = false) // cannot change dish in order item - item should be cancelled and reordered instead
+    @JoinColumn(name = "dish_id", updatable = false, nullable = false)
     @NotNull
     private Dish dish;
 
     @NotNull
+    /**
+     * Snapshot of the dish price at ordering time to preserve historical totals.
+     */
     @Column(updatable = false, nullable = false)
-    private Integer dishPriceAtOrderTime;   //save dish price at order
+    private Integer dishPriceAtOrderTime;
 
     @NotNull
     @Column(updatable = false, nullable = false)
-    private Integer quantity;   //usually 1
+    private Integer quantity;
 
     private Integer seatNumber;
 
@@ -51,6 +56,9 @@ public class OrderItem
     @Setter
     @Getter
     @NotNull
+    /**
+     * Soft-cancel flag used to exclude items from billing and reporting.
+     */
     @Column(nullable = false)
     private Boolean isCancelled = false;
 
@@ -60,7 +68,15 @@ public class OrderItem
     @Column(nullable = false, name = "order_item_status")
     private OrderItemStatus status;
 
-    //constructor for order item (not every field has setter)
+    /**
+     * Creates an order item and stores current dish price as immutable snapshot.
+     *
+     * @param dish ordered dish
+     * @param quantity ordered quantity
+     * @param seatNumber optional seat number
+     * @param notes optional free-text notes
+     * @param order owning order
+     */
     public OrderItem(Dish dish, Integer quantity, Integer seatNumber, String notes, Order order) {
         this.dish = dish;
         this.dishPriceAtOrderTime = dish.getPriceInCents();
@@ -68,6 +84,6 @@ public class OrderItem
         this.seatNumber = seatNumber;
         this.notes = notes;
         this.order = order;
-        this.status = OrderItemStatus.NEW; // default status
+        this.status = OrderItemStatus.NEW;
     }
 }

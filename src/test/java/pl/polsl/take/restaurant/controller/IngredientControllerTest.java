@@ -26,6 +26,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = IngredientController.class)
 @Import(GlobalExceptionHandler.class)
+/**
+ * Controller-layer tests for ingredient endpoints with request validation and error mapping checks.
+ */
 class IngredientControllerTest {
 
     @Autowired
@@ -41,10 +44,6 @@ class IngredientControllerTest {
         objectMapper = new ObjectMapper();
     }
 
-    // -------------------------------------------------------------------------
-    // GET /ingredients
-    // -------------------------------------------------------------------------
-
     @Test
     void getAll_shouldReturn200WithList() throws Exception {
         when(ingredientService.getAll()).thenReturn(List.of());
@@ -52,10 +51,6 @@ class IngredientControllerTest {
         mockMvc.perform(get("/ingredients"))
                 .andExpect(status().isOk());
     }
-
-    // -------------------------------------------------------------------------
-    // GET /ingredients/{id}
-    // -------------------------------------------------------------------------
 
     @Test
     void get_shouldReturn200WhenIngredientFound() throws Exception {
@@ -71,14 +66,10 @@ class IngredientControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // -------------------------------------------------------------------------
-    // POST /ingredients - walidacja @Valid
-    // -------------------------------------------------------------------------
-
     @Test
     void create_shouldReturn400WhenNameIsBlank() throws Exception {
         CreateIngredientDTO dto = new CreateIngredientDTO();
-        dto.setName("   "); // @NotBlank
+        dto.setName("   ");
         dto.setIsVegan(true);
         dto.setUnit(Unit.GRAM);
 
@@ -92,7 +83,7 @@ class IngredientControllerTest {
     void create_shouldReturn400WhenIsVeganIsNull() throws Exception {
         CreateIngredientDTO dto = new CreateIngredientDTO();
         dto.setName("Mąka");
-        dto.setIsVegan(null); // @NotNull
+        dto.setIsVegan(null);
         dto.setUnit(Unit.GRAM);
 
         mockMvc.perform(post("/ingredients")
@@ -106,7 +97,7 @@ class IngredientControllerTest {
         CreateIngredientDTO dto = new CreateIngredientDTO();
         dto.setName("Mąka");
         dto.setIsVegan(true);
-        dto.setUnit(null); // @NotNull
+        dto.setUnit(null);
 
         mockMvc.perform(post("/ingredients")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -129,14 +120,10 @@ class IngredientControllerTest {
         verify(ingredientService).create(any(CreateIngredientDTO.class));
     }
 
-    // -------------------------------------------------------------------------
-    // PUT /ingredients/{id}
-    // -------------------------------------------------------------------------
-
     @Test
     void update_shouldReturn400WhenNameIsBlank() throws Exception {
         UpdateIngredientDTO dto = new UpdateIngredientDTO();
-        dto.setName(""); // @NotBlank
+        dto.setName("");
         dto.setIsVegan(true);
 
         mockMvc.perform(put("/ingredients/1")
@@ -149,7 +136,7 @@ class IngredientControllerTest {
     void update_shouldReturn400WhenIsVeganIsNull() throws Exception {
         UpdateIngredientDTO dto = new UpdateIngredientDTO();
         dto.setName("Mąka");
-        dto.setIsVegan(null); // @NotNull
+        dto.setIsVegan(null);
 
         mockMvc.perform(put("/ingredients/1")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -185,10 +172,6 @@ class IngredientControllerTest {
         verify(ingredientService).update(eq(1L), any(UpdateIngredientDTO.class));
     }
 
-    // -------------------------------------------------------------------------
-    // DELETE /ingredients/{id}
-    // -------------------------------------------------------------------------
-
     @Test
     void delete_shouldReturn200WhenIngredientExists() throws Exception {
         mockMvc.perform(delete("/ingredients/1"))
@@ -199,7 +182,7 @@ class IngredientControllerTest {
 
     @Test
     void delete_shouldReturn409WhenIngredientUsedInRecipe() throws Exception {
-        // Given - składnik jest używany w przepisie → nie można usunąć
+
         doThrow(new ConflictException("Cannot delete ingredient because it is used in an existing recipe."))
                 .when(ingredientService).delete(1L);
 

@@ -18,6 +18,9 @@ import lombok.NoArgsConstructor;
 @Table(name = "recipe_items")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+/**
+ * Recipe entry linking a dish with one ingredient and required amount.
+ */
 public class RecipeItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,7 +32,7 @@ public class RecipeItem {
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ingredient_id",updatable = false, nullable = false)
+    @JoinColumn(name = "ingredient_id", updatable = false, nullable = false)
     private Ingredient ingredient;
 
     @NotNull
@@ -37,6 +40,13 @@ public class RecipeItem {
     @JoinColumn(name = "dish_id", updatable = false, nullable = false)
     private Dish dish;
 
+    /**
+    * Creates one recipe entry for a dish.
+    *
+    * @param dish owning dish
+    * @param ingredient ingredient used in dish
+    * @param amount required amount in ingredient unit
+    */
     public RecipeItem(Dish dish, Ingredient ingredient, Double amount) {
         this.dish = dish;
         this.ingredient = ingredient;

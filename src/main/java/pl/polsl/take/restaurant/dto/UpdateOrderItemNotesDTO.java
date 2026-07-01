@@ -6,5 +6,5 @@ import lombok.Setter;
 @Getter
 @Setter
 public class UpdateOrderItemNotesDTO {
-    private String notes; 
+    private String notes;
 }

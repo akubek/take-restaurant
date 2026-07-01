@@ -9,5 +9,6 @@ import pl.polsl.take.restaurant.model.Dish;
 public interface DishRepository extends JpaRepository<Dish, Long> {
 
     List<Dish> findAllByIsActiveTrue();
+
     Optional<Dish> findByIdAndIsActiveTrue(Long id);
 }

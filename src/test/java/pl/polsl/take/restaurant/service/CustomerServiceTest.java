@@ -23,6 +23,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+/**
+ * Unit tests for customer service behavior, including active filtering and anonymization.
+ */
 class CustomerServiceTest {
 
     @Mock
@@ -34,21 +37,17 @@ class CustomerServiceTest {
     @InjectMocks
     private CustomerService customerService;
 
-    // -------------------------------------------------------------------------
-    // getById
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturnCustomerDTOForActiveCustomer() {
-        // Given
+        // Given: existing active customer in repository
         Customer customer = new Customer("Jan", "Kowalski", "123456789", "jan@test.com");
         ReflectionTestUtils.setField(customer, "id", 1L);
         when(customerRepo.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(customer));
 
-        // When
+        // When: customer is fetched by ID
         CustomerDTO result = customerService.getById(1L);
 
-        // Then
+        // Then: mapped DTO contains expected customer data
         assertNotNull(result);
         assertEquals("Jan", result.getFirstName());
         assertEquals("Kowalski", result.getLastName());
@@ -56,41 +55,32 @@ class CustomerServiceTest {
 
     @Test
     void shouldThrowNotFoundForNonExistentOrInactiveCustomer() {
-        // Given - findByIdAndIsActiveTrue zwraca empty zarówno dla nieistniejącego
-        // jak i dla isActive=false (soft-deleted) klienta
+        // Given: repository has no active customer for requested ID
         when(customerRepo.findByIdAndIsActiveTrue(99L)).thenReturn(Optional.empty());
 
-        // When / Then
+        // When / Then: lookup fails with not-found exception
         assertThrows(NotFoundException.class, () -> customerService.getById(99L));
     }
 
-    // -------------------------------------------------------------------------
-    // getAll
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturnOnlyActiveCustomers() {
-        // Given - repo zwraca tylko aktywnych (findAllByIsActiveTrue)
+        // Given: repository returns only active records
         Customer active = new Customer("Anna", "Nowak", "987", "anna@test.com");
         when(customerRepo.findAllByIsActiveTrue()).thenReturn(List.of(active));
 
-        // When
+        // When: all customers are requested
         List<CustomerDTO> result = customerService.getAll();
 
-        // Then
+        // Then: only active customers are returned and correct repo method is used
         assertEquals(1, result.size());
-        // weryfikacja że wywołano właściwą metodę (a nie findAll)
+
         verify(customerRepo).findAllByIsActiveTrue();
         verify(customerRepo, never()).findAll();
     }
 
-    // -------------------------------------------------------------------------
-    // create
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldCreateAnonymousCustomerWithoutPersonalData() {
-        // Given - klient anonimowy: firstName i lastName są null
+        // Given: creation payload without personal fields
         CreateCustomerDTO dto = new CreateCustomerDTO();
         dto.setFirstName(null);
         dto.setLastName(null);
@@ -101,30 +91,26 @@ class CustomerServiceTest {
         ReflectionTestUtils.setField(saved, "id", 5L);
         when(customerRepo.save(any())).thenReturn(saved);
 
-        // When
+        // When: customer is created
         CustomerDTO result = customerService.create(dto);
 
-        // Then - tworzenie nie rzuca wyjątku, klient zapisany
+        // Then: creation succeeds and entity is persisted
         assertNotNull(result);
         verify(customerRepo).save(any(Customer.class));
     }
 
-    // -------------------------------------------------------------------------
-    // anonymize
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldAnonymizeCustomerDataAndSetInactive() {
-        // Given
+        // Given: active customer exists
         Customer customer = new Customer("Jan", "Kowalski", "123456789", "jan@test.com");
         ReflectionTestUtils.setField(customer, "id", 1L);
         when(customerRepo.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(customer));
         when(customerRepo.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        // When
+        // When: anonymization is executed
         customerService.anonymize(1L);
 
-        // Then - klient nieaktywny i dane osobowe wyczyszczone
+        // Then: personal data is removed and customer is marked inactive
         assertFalse(customer.isActive());
         assertNull(customer.getPhoneNumber());
         assertNull(customer.getEmail());
@@ -139,57 +125,48 @@ class CustomerServiceTest {
         verify(customerRepo, never()).save(any());
     }
 
-    // -------------------------------------------------------------------------
-    // getTotalSpending
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturnZeroForCustomerWithNoOrders() {
-        // Given - klient istnieje, ale nie ma zamówień (SUM zwraca NULL → Optional.empty)
+        // Given: active customer with no paid orders
         Customer customer = new Customer("Jan", "Kowalski", "123", "jan@test.com");
         when(customerRepo.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(customer));
         when(orderRepo.sumCustomerSpending(1L)).thenReturn(Optional.empty());
 
-        // When
+        // When: spending is requested
         Long result = customerService.getTotalSpending(1L);
 
-        // Then - 0L zamiast NPE
+        // Then: spending defaults to zero
         assertEquals(0L, result);
     }
 
     @Test
     void shouldReturnCorrectTotalSpending() {
-        // Given
+        // Given: active customer with aggregated spending value
         Customer customer = new Customer("Jan", "Kowalski", "123", "jan@test.com");
         when(customerRepo.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(customer));
         when(orderRepo.sumCustomerSpending(1L)).thenReturn(Optional.of(15000L));
 
-        // When
+        // When: spending is requested
         Long result = customerService.getTotalSpending(1L);
 
-        // Then
+        // Then: returned value matches repository aggregation
         assertEquals(15000L, result);
     }
 
     @Test
     void shouldThrowNotFoundWhenGettingSpendingForNonExistentCustomer() {
-        // Given - klient nie istnieje - NIE zwracamy 0, rzucamy 404
-        // (nie chcemy zwracać 0 dla id które nie istnieje w bazie)
+        // Given: customer does not exist as active
         when(customerRepo.findByIdAndIsActiveTrue(99L)).thenReturn(Optional.empty());
 
-        // When / Then
+        // When / Then: spending request fails before order query is executed
         assertThrows(NotFoundException.class, () -> customerService.getTotalSpending(99L));
-        // weryfikacja że nigdy nie odpytano bazy o zamówienia dla nieistniejącego klienta
+
         verify(orderRepo, never()).sumCustomerSpending(any());
     }
 
-    // -------------------------------------------------------------------------
-    // update
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldUpdateCustomerFields() {
-        // Given
+        // Given: existing active customer and update payload
         Customer customer = new Customer("Jan", "Kowalski", "111", "old@test.com");
         ReflectionTestUtils.setField(customer, "id", 1L);
         when(customerRepo.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(customer));
@@ -201,10 +178,10 @@ class CustomerServiceTest {
         dto.setPhoneNumber("999999999");
         dto.setEmail("new@test.com");
 
-        // When
+        // When: update is executed
         CustomerDTO result = customerService.update(1L, dto);
 
-        // Then
+        // Then: DTO and entity reflect updated values
         assertEquals("Piotr", result.getFirstName());
         assertEquals("Nowak", result.getLastName());
     }

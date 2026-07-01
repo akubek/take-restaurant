@@ -25,6 +25,9 @@ import pl.polsl.take.restaurant.model.enums.SpicinessLevel;
 @Table(name = "dish")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+/**
+ * Dish entity available in menu and used by order items.
+ */
 public class Dish {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,27 +42,45 @@ public class Dish {
     private String description;
 
     @Setter
+    /**
+     * Price stored in minor currency units (cents/grosz).
+     */
     @NotNull
     @Column(nullable = false)
-    private Integer priceInCents; // or "grosze"
-    
+    private Integer priceInCents;
+
+    /**
+     * Explicitly provided dish calories, kept immutable after creation.
+     */
     @NotNull
     @Column(nullable = false, updatable = false)
-    private Integer calories; // not calculated from ingredients because it might be slightly different (f.e fried food using oil - oil not counted as and ingredient, but kcal is higher)
-    
+    private Integer calories;
+
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(updatable = false, nullable = false)
     private SpicinessLevel spiciness;
-    
+
     @OneToMany(mappedBy = "dish", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RecipeItem> recipeItems = new ArrayList<>();
 
     @Setter
+    /**
+     * Soft-delete flag used for menu visibility.
+     */
     @NotNull
     @Column(nullable = false)
-    private Boolean isActive = true; // is the dish an active menu item
+    private Boolean isActive = true;
 
+    /**
+     * Creates a dish with immutable nutrition/spiciness attributes and editable basic info.
+     *
+     * @param name dish name
+     * @param description description shown in menu
+     * @param priceInCents price in minor currency units
+     * @param calories calories per dish
+     * @param spiciness spiciness level
+     */
     public Dish(String name, String description, Integer priceInCents, Integer calories, SpicinessLevel spiciness) {
         this.name = name;
         this.description = description;
@@ -68,5 +89,3 @@ public class Dish {
         this.spiciness = spiciness;
     }
 }
-
-

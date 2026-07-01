@@ -22,6 +22,9 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
+/**
+ * Customer entity used for order ownership and spending history.
+ */
 public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,18 +38,32 @@ public class Customer {
     private String lastName;
     private String phoneNumber;
     private String email;
+
+    /**
+     * Soft-delete flag. Inactive customers are excluded from regular reads.
+     */
     @NotNull
     @Column(nullable = false)
-    private boolean isActive = true; // is the customer active (not deleted)
+    private boolean isActive = true;
 
-    public Customer(String firstName, String lastName, String phoneNumber, String email)
-    {
-    	this.firstName = firstName;
-    	this.lastName = lastName;
-    	this.phoneNumber = phoneNumber;
-    	this.email = email;
+    /**
+     * Creates a customer with basic contact data.
+     *
+     * @param firstName first name
+     * @param lastName last name
+     * @param phoneNumber phone number
+     * @param email email address
+     */
+    public Customer(String firstName, String lastName, String phoneNumber, String email) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.phoneNumber = phoneNumber;
+        this.email = email;
     }
-    
-    @OneToMany(mappedBy = "customer", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+
+    /**
+     * Orders assigned to this customer.
+     */
+    @OneToMany(mappedBy = "customer", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     private List<Order> orders = new ArrayList<>();
 }

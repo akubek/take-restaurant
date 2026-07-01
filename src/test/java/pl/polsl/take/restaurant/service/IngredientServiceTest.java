@@ -30,6 +30,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+/**
+ * Unit tests for ingredient service CRUD logic and recipe-reference deletion guard.
+ */
 class IngredientServiceTest {
 
     @Mock
@@ -44,21 +47,15 @@ class IngredientServiceTest {
     @Captor
     private ArgumentCaptor<Ingredient> ingredientCaptor;
 
-    // -------------------------------------------------------------------------
-    // getById
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturnIngredientDTOForExistingIngredient() {
-        // Given
+
         Ingredient ingredient = new Ingredient("Mąka", true, Unit.GRAM, Set.of(Allergen.GLUTEN));
         ReflectionTestUtils.setField(ingredient, "id", 1L);
         when(ingredientRepo.findById(1L)).thenReturn(Optional.of(ingredient));
 
-        // When
         IngredientDTO result = ingredientService.getById(1L);
 
-        // Then
         assertNotNull(result);
         assertEquals("Mąka", result.getName());
         assertTrue(result.getIsVegan());
@@ -73,21 +70,15 @@ class IngredientServiceTest {
         assertThrows(NotFoundException.class, () -> ingredientService.getById(99L));
     }
 
-    // -------------------------------------------------------------------------
-    // getAll
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturnAllIngredients() {
-        // Given
+
         Ingredient i1 = new Ingredient("Mąka", true, Unit.GRAM, Set.of());
         Ingredient i2 = new Ingredient("Mleko", false, Unit.MILLILITER, Set.of(Allergen.LACTOSE));
         when(ingredientRepo.findAll()).thenReturn(List.of(i1, i2));
 
-        // When
         List<IngredientDTO> result = ingredientService.getAll();
 
-        // Then
         assertEquals(2, result.size());
         verify(ingredientRepo).findAll();
     }
@@ -101,13 +92,9 @@ class IngredientServiceTest {
         assertTrue(result.isEmpty());
     }
 
-    // -------------------------------------------------------------------------
-    // create
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldCreateIngredientWithAllergens() {
-        // Given
+        // Given: creation payload with allergen metadata
         CreateIngredientDTO dto = new CreateIngredientDTO();
         dto.setName("Pszenica");
         dto.setIsVegan(true);
@@ -120,10 +107,10 @@ class IngredientServiceTest {
             return saved;
         });
 
-        // When
+        // When: ingredient is created
         IngredientDTO result = ingredientService.create(dto);
 
-        // Then
+        // Then: persisted ingredient and DTO carry expected values
         verify(ingredientRepo).save(ingredientCaptor.capture());
         Ingredient saved = ingredientCaptor.getValue();
         assertEquals("Pszenica", saved.getName());
@@ -135,7 +122,7 @@ class IngredientServiceTest {
 
     @Test
     void shouldCreateIngredientWithoutAllergens() {
-        // Given - pusty zbiór alergenów (np. oliwa z oliwek)
+        // Given: creation payload without allergens
         CreateIngredientDTO dto = new CreateIngredientDTO();
         dto.setName("Oliwa");
         dto.setIsVegan(true);
@@ -144,10 +131,10 @@ class IngredientServiceTest {
 
         when(ingredientRepo.save(any(Ingredient.class))).thenAnswer(i -> i.getArgument(0));
 
-        // When
+        // When: ingredient is created
         IngredientDTO result = ingredientService.create(dto);
 
-        // Then
+        // Then: allergen set is empty and result is returned
         verify(ingredientRepo).save(ingredientCaptor.capture());
         assertTrue(ingredientCaptor.getValue().getAllergens().isEmpty());
         assertNotNull(result);
@@ -155,7 +142,7 @@ class IngredientServiceTest {
 
     @Test
     void shouldCreateNonVeganIngredient() {
-        // Given
+
         CreateIngredientDTO dto = new CreateIngredientDTO();
         dto.setName("Ser");
         dto.setIsVegan(false);
@@ -164,21 +151,15 @@ class IngredientServiceTest {
 
         when(ingredientRepo.save(any(Ingredient.class))).thenAnswer(i -> i.getArgument(0));
 
-        // When
         ingredientService.create(dto);
 
-        // Then
         verify(ingredientRepo).save(ingredientCaptor.capture());
         assertFalse(ingredientCaptor.getValue().getIsVegan());
     }
 
-    // -------------------------------------------------------------------------
-    // update
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldUpdateIngredientNameAndVeganStatus() {
-        // Given
+        // Given: existing ingredient and update payload with new allergens
         Ingredient ingredient = new Ingredient("Stara Nazwa", false, Unit.GRAM, new HashSet<>());
         ReflectionTestUtils.setField(ingredient, "id", 1L);
         when(ingredientRepo.findById(1L)).thenReturn(Optional.of(ingredient));
@@ -189,10 +170,10 @@ class IngredientServiceTest {
         dto.setIsVegan(true);
         dto.setAllergens(Set.of(Allergen.PEANUTS));
 
-        // When
+        // When: update is executed
         IngredientDTO result = ingredientService.update(1L, dto);
 
-        // Then - encja zaktualizowana, DTO zwraca nowe dane
+        // Then: entity and result reflect updated state
         assertEquals("Nowa Nazwa", ingredient.getName());
         assertTrue(ingredient.getIsVegan());
         assertTrue(ingredient.getAllergens().contains(Allergen.PEANUTS));
@@ -202,8 +183,9 @@ class IngredientServiceTest {
 
     @Test
     void shouldUpdateIngredientAndClearAllergens() {
-        // Given - składnik miał alergeny, update usuwa wszystkie
-        Ingredient ingredient = new Ingredient("Mleko", false, Unit.MILLILITER, new HashSet<>(Set.of(Allergen.LACTOSE)));
+        // Given: existing ingredient currently having allergens
+        Ingredient ingredient = new Ingredient("Mleko", false, Unit.MILLILITER,
+                new HashSet<>(Set.of(Allergen.LACTOSE)));
         ReflectionTestUtils.setField(ingredient, "id", 2L);
         when(ingredientRepo.findById(2L)).thenReturn(Optional.of(ingredient));
         when(ingredientRepo.save(any(Ingredient.class))).thenAnswer(i -> i.getArgument(0));
@@ -211,12 +193,12 @@ class IngredientServiceTest {
         UpdateIngredientDTO dto = new UpdateIngredientDTO();
         dto.setName("Mleko Roślinne");
         dto.setIsVegan(true);
-        dto.setAllergens(null); // brak alergenów po aktualizacji
+        dto.setAllergens(null);
 
-        // When
+        // When: update is executed with null allergens
         ingredientService.update(2L, dto);
 
-        // Then - lista alergenów wyczyszczona
+        // Then: allergens are cleared
         assertTrue(ingredient.getAllergens().isEmpty());
     }
 
@@ -233,35 +215,31 @@ class IngredientServiceTest {
         verify(ingredientRepo, never()).save(any());
     }
 
-    // -------------------------------------------------------------------------
-    // delete
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldDeleteIngredientWhenNotUsedInAnyRecipe() {
-        // Given
+        // Given: ingredient exists and is not referenced by any recipe item
         Ingredient ingredient = new Ingredient("Sól", true, Unit.GRAM, Set.of());
         ReflectionTestUtils.setField(ingredient, "id", 1L);
         when(ingredientRepo.findById(1L)).thenReturn(Optional.of(ingredient));
         when(recipeItemRepo.existsByIngredientId(1L)).thenReturn(false);
 
-        // When
+        // When: delete is requested
         ingredientService.delete(1L);
 
-        // Then
+        // Then: ingredient is deleted from repository
         verify(ingredientRepo).delete(ingredient);
         verify(ingredientRepo, never()).save(any());
     }
 
     @Test
     void shouldThrowConflictWhenDeletingIngredientUsedInRecipe() {
-        // Given - składnik jest używany w przepisie → nie można usunąć
+        // Given: ingredient exists and is used in recipe
         Ingredient ingredient = new Ingredient("Mąka", true, Unit.GRAM, Set.of(Allergen.GLUTEN));
         ReflectionTestUtils.setField(ingredient, "id", 1L);
         when(ingredientRepo.findById(1L)).thenReturn(Optional.of(ingredient));
         when(recipeItemRepo.existsByIngredientId(1L)).thenReturn(true);
 
-        // When / Then
+        // When / Then: delete is blocked with conflict
         assertThrows(ConflictException.class, () -> ingredientService.delete(1L));
         verify(ingredientRepo, never()).delete(any());
     }
@@ -272,7 +250,7 @@ class IngredientServiceTest {
 
         assertThrows(NotFoundException.class, () -> ingredientService.delete(99L));
         verify(ingredientRepo, never()).delete(any());
-        // Upewniamy się że sprawdzenie przepisów nie nastąpiło (w ogóle nie dotarliśmy do recipeItemRepo)
+
         verify(recipeItemRepo, never()).existsByIngredientId(any());
     }
 }

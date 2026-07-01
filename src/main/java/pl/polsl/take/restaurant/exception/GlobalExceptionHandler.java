@@ -12,23 +12,32 @@ import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @ControllerAdvice
+/**
+ * Maps application and validation exceptions to consistent HTTP error responses.
+ */
 public class GlobalExceptionHandler {
 
-    // 409 Conflict
+    /**
+     * Handles business conflicts.
+     */
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
         ErrorResponse error = new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage());
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
-    // 404 Not Found
-    @ExceptionHandler({NoSuchElementException.class, NotFoundException.class})
+    /**
+     * Handles missing resources.
+     */
+    @ExceptionHandler({ NoSuchElementException.class, NotFoundException.class })
     public ResponseEntity<ErrorResponse> handleNotFound(Exception ex) {
         ErrorResponse error = new ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage());
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
-    // 400 Bad Request
+    /**
+     * Handles request body validation errors.
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
         String errorMessage = ex.getBindingResult().getFieldErrors().stream()
@@ -39,18 +48,23 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
-    // 400 Bad Request for Constraint Violations
+    /**
+     * Handles parameter and path validation errors.
+     */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
         String errorMessage = ex.getConstraintViolations().stream()
                 .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
                 .collect(Collectors.joining(", "));
-                
-        ErrorResponse error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Entity validation error: " + errorMessage);
+
+        ErrorResponse error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(),
+                "Entity validation error: " + errorMessage);
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
-    // 500 Internal Server Error
+    /**
+     * Fallback handler for unexpected errors.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex) {
         ErrorResponse error = new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unexpected error occurred.");

@@ -36,6 +36,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+/**
+ * Unit tests for dish service rules, including recipe validation and soft-delete behavior.
+ */
 class DishServiceTest {
 
     @Mock
@@ -53,21 +56,15 @@ class DishServiceTest {
     @Captor
     private ArgumentCaptor<Dish> dishCaptor;
 
-    // -------------------------------------------------------------------------
-    // getById / findActiveById
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturnDishDTOForActiveDish() {
-        // Given
+
         Dish dish = new Dish("Pizza", "Opis", 3200, 1000, SpicinessLevel.MILD);
         ReflectionTestUtils.setField(dish, "id", 1L);
         when(dishRepo.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(dish));
 
-        // When
         DishDTO result = dishService.getById(1L);
 
-        // Then
         assertNotNull(result);
         assertEquals("Pizza", result.getName());
     }
@@ -79,38 +76,34 @@ class DishServiceTest {
         assertThrows(NotFoundException.class, () -> dishService.getById(99L));
     }
 
-    // -------------------------------------------------------------------------
-    // create - logika przypisywania składników (RecipeItems)
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldCreateDishWithoutIngredients() {
-        // Given - Puste DTO składników (np. dla napojów z puszki)
+        // Given: creation payload without recipe items
         CreateDishDTO dto = new CreateDishDTO();
         dto.setName("Cola");
         dto.setPriceInCents(800);
-        
+
         when(dishRepo.save(any(Dish.class))).thenAnswer(i -> {
             Dish d = i.getArgument(0);
             ReflectionTestUtils.setField(d, "id", 1L);
             return d;
         });
 
-        // When
+        // When: dish is created
         DishDTO result = dishService.create(dto);
 
-        // Then
+        // Then: saved dish has empty recipe and valid response
         verify(dishRepo).save(dishCaptor.capture());
         Dish saved = dishCaptor.getValue();
-        
+
         assertEquals("Cola", saved.getName());
-        assertTrue(saved.getRecipeItems().isEmpty()); // Lista przepisów pusta
+        assertTrue(saved.getRecipeItems().isEmpty());
         assertNotNull(result);
     }
 
     @Test
     void shouldCreateDishAndLinkExistingIngredient() {
-        // Given
+        // Given: existing ingredient referenced by ingredientId
         Ingredient existingIngredient = new Ingredient("Ser", false, Unit.GRAM, Set.of());
         ReflectionTestUtils.setField(existingIngredient, "id", 5L);
 
@@ -118,30 +111,30 @@ class DishServiceTest {
         when(dishRepo.save(any(Dish.class))).thenAnswer(i -> i.getArgument(0));
 
         RecipeItemRequestDTO itemReq = new RecipeItemRequestDTO();
-        itemReq.setIngredientId(5L); // Używamy ID istniejącego składnika
+        itemReq.setIngredientId(5L);
         itemReq.setAmount(150.0);
 
         CreateDishDTO dto = new CreateDishDTO();
         dto.setName("Pizza Cheese");
         dto.setIngredients(List.of(itemReq));
 
-        // When
+        // When: dish is created
         dishService.create(dto);
 
-        // Then
+        // Then: recipe links existing ingredient and no new ingredient is saved
         verify(dishRepo).save(dishCaptor.capture());
         Dish saved = dishCaptor.getValue();
 
         assertEquals(1, saved.getRecipeItems().size());
         assertEquals(existingIngredient, saved.getRecipeItems().get(0).getIngredient());
         assertEquals(150.0, saved.getRecipeItems().get(0).getAmount());
-        // Upewniamy się, że nie próbowano stworzyć nowego składnika w bazie
+
         verify(ingredientRepo, never()).save(any());
     }
 
     @Test
     void shouldCreateDishAndCreateNewIngredientOnTheFly() {
-        // Given - Zapis nowego składnika i zapis nowego dania
+        // Given: recipe item carries inline ingredient object
         when(ingredientRepo.save(any(Ingredient.class))).thenAnswer(i -> {
             Ingredient ing = i.getArgument(0);
             ReflectionTestUtils.setField(ing, "id", 10L);
@@ -154,20 +147,20 @@ class DishServiceTest {
         newIngDto.setUnit(Unit.MILLILITER);
 
         RecipeItemRequestDTO itemReq = new RecipeItemRequestDTO();
-        itemReq.setIngredient(newIngDto); // Używamy NOWEGO obiektu zamiast ID
+        itemReq.setIngredient(newIngDto);
         itemReq.setAmount(50.0);
 
         CreateDishDTO dto = new CreateDishDTO();
         dto.setName("Burger");
         dto.setIngredients(List.of(itemReq));
 
-        // When
+        // When: dish is created
         dishService.create(dto);
 
-        // Then
-        verify(ingredientRepo).save(any(Ingredient.class)); // Serwis musiał zapisać nowy składnik
+        // Then: inline ingredient is created and attached to saved dish recipe
+        verify(ingredientRepo).save(any(Ingredient.class));
         verify(dishRepo).save(dishCaptor.capture());
-        
+
         Dish savedDish = dishCaptor.getValue();
         assertEquals(1, savedDish.getRecipeItems().size());
         assertEquals("Tajny Sos", savedDish.getRecipeItems().get(0).getIngredient().getName());
@@ -175,22 +168,21 @@ class DishServiceTest {
 
     @Test
     void shouldThrowConflictWhenBothIngredientIdAndObjectAreProvided() {
-        // Given
+
         RecipeItemRequestDTO itemReq = new RecipeItemRequestDTO();
-        itemReq.setIngredientId(5L); // ID jest
-        itemReq.setIngredient(new CreateIngredientDTO()); // Obiekt też jest -> KONFLIKT
+        itemReq.setIngredientId(5L);
+        itemReq.setIngredient(new CreateIngredientDTO());
 
         CreateDishDTO dto = new CreateDishDTO();
         dto.setIngredients(List.of(itemReq));
 
-        // When / Then
         assertThrows(ConflictException.class, () -> dishService.create(dto));
         verify(dishRepo, never()).save(any());
     }
 
     @Test
     void shouldThrowConflictWhenNeitherIngredientIdNorObjectAreProvided() {
-        // Given
+
         RecipeItemRequestDTO itemReq = new RecipeItemRequestDTO();
         itemReq.setIngredientId(null);
         itemReq.setIngredient(null);
@@ -198,17 +190,12 @@ class DishServiceTest {
         CreateDishDTO dto = new CreateDishDTO();
         dto.setIngredients(List.of(itemReq));
 
-        // When / Then
         assertThrows(ConflictException.class, () -> dishService.create(dto));
     }
 
-    // -------------------------------------------------------------------------
-    // update
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldUpdateDishProperties() {
-        // Given
+        // Given: existing active dish and update payload
         Dish dish = new Dish("Stara", "Opis", 1000, 500, SpicinessLevel.MILD);
         ReflectionTestUtils.setField(dish, "id", 1L);
 
@@ -220,98 +207,82 @@ class DishServiceTest {
         updateDto.setDescription("Nowy Opis");
         updateDto.setPriceInCents(2000);
 
-        // When
+        // When: update is executed
         DishDTO result = dishService.update(1L, updateDto);
 
-        // Then
+        // Then: dish fields are updated in entity and response
         assertEquals("Nowa", result.getName());
         assertEquals(2000, result.getPriceInCents());
-        assertEquals("Nowa", dish.getName()); // Upewniamy się, że encja została zaktualizowana
+        assertEquals("Nowa", dish.getName());
     }
-
-    // -------------------------------------------------------------------------
-    // delete (Soft Delete vs Hard Delete)
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldHardDeleteDishWhenNeverOrdered() {
-        // Given
+        // Given: dish exists and has no order history
         Dish dish = new Dish("Pizza", "Opis", 3200, 1000, SpicinessLevel.MILD);
         ReflectionTestUtils.setField(dish, "id", 1L);
 
         when(dishRepo.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(dish));
-        // Repozytorium zamówień mówi: "Nikt nigdy nie zamówił tego dania"
+
         when(orderRepo.existsByOrderItemsDishId(1L)).thenReturn(false);
 
-        // When
+        // When: delete is requested
         dishService.delete(1L);
 
-        // Then - bezpiecznie i bezpowrotnie usuwamy z bazy
+        // Then: hard delete is executed
         verify(dishRepo).delete(dish);
         verify(dishRepo, never()).save(any());
     }
 
     @Test
     void shouldSoftDeleteDishWhenAlreadyOrdered() {
-        // Given
+        // Given: dish exists and has order history
         Dish dish = new Dish("Pizza", "Opis", 3200, 1000, SpicinessLevel.MILD);
         ReflectionTestUtils.setField(dish, "id", 1L);
 
         when(dishRepo.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(dish));
-        // Repozytorium zamówień mówi: "Ktoś już to kiedyś zamówił!"
+
         when(orderRepo.existsByOrderItemsDishId(1L)).thenReturn(true);
 
-        // When
+        // When: delete is requested
         dishService.delete(1L);
 
-        // Then - nie możemy usunąć, zmieniamy tylko isActive na false (Soft Delete)
+        // Then: dish is soft-deactivated instead of hard deleted
         assertFalse(dish.getIsActive());
         verify(dishRepo).save(dish);
         verify(dishRepo, never()).delete(any());
     }
 
-    // -------------------------------------------------------------------------
-    // deactivate / reactivate
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldDeactivateDish() {
-        // Given - uzywamy zwyklego findById (bo możemy chcieć operować też na nieaktywnych)
+
         Dish dish = new Dish("Pizza", "Opis", 3200, 1000, SpicinessLevel.MILD);
         when(dishRepo.findById(1L)).thenReturn(Optional.of(dish));
         when(dishRepo.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        // When
         dishService.deactivateDish(1L);
 
-        // Then
         assertFalse(dish.getIsActive());
         verify(dishRepo).save(dish);
     }
 
     @Test
     void shouldReactivateDish() {
-        // Given
+
         Dish dish = new Dish("Pizza", "Opis", 3200, 1000, SpicinessLevel.MILD);
         dish.setIsActive(false);
         when(dishRepo.findById(1L)).thenReturn(Optional.of(dish));
         when(dishRepo.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        // When
         dishService.reactivateDish(1L);
 
-        // Then
         assertTrue(dish.getIsActive());
         verify(dishRepo).save(dish);
     }
 
-    // -------------------------------------------------------------------------
-    // getIngredients (RecipeItem)
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturnRecipeItemsForActiveDish() {
-        // Given
+        // Given: active dish with one recipe item
         Dish dish = new Dish("Pizza", "Opis", 3200, 1000, SpicinessLevel.MILD);
         ReflectionTestUtils.setField(dish, "id", 1L);
 
@@ -321,10 +292,10 @@ class DishServiceTest {
 
         when(dishRepo.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(dish));
 
-        // When
+        // When: recipe items are fetched
         List<RecipeItemResponseDTO> result = dishService.getIngredients(1L);
 
-        // Then
+        // Then: mapped recipe item data is returned
         assertEquals(1, result.size());
         assertEquals("Ser", result.get(0).getIngredientName());
         assertEquals(150.0, result.get(0).getAmount());
@@ -334,16 +305,14 @@ class DishServiceTest {
 
     @Test
     void shouldReturnEmptyListForDishWithNoRecipe() {
-        // Given - danie bez składników w przepisie (np. napój z puszki)
+
         Dish dish = new Dish("Cola", "Napój", 800, 150, SpicinessLevel.MILD);
         ReflectionTestUtils.setField(dish, "id", 2L);
 
         when(dishRepo.findByIdAndIsActiveTrue(2L)).thenReturn(Optional.of(dish));
 
-        // When
         List<RecipeItemResponseDTO> result = dishService.getIngredients(2L);
 
-        // Then
         assertTrue(result.isEmpty());
     }
 
@@ -356,7 +325,7 @@ class DishServiceTest {
 
     @Test
     void shouldReturnMultipleRecipeItemsForDish() {
-        // Given
+        // Given: active dish with multiple recipe entries
         Dish dish = new Dish("Burger", "Opis", 2500, 700, SpicinessLevel.MILD);
         ReflectionTestUtils.setField(dish, "id", 3L);
 
@@ -367,10 +336,10 @@ class DishServiceTest {
 
         when(dishRepo.findByIdAndIsActiveTrue(3L)).thenReturn(Optional.of(dish));
 
-        // When
+        // When: recipe items are fetched
         List<RecipeItemResponseDTO> result = dishService.getIngredients(3L);
 
-        // Then
+        // Then: all recipe items are returned
         assertEquals(2, result.size());
     }
 }

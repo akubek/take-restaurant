@@ -28,6 +28,9 @@ import pl.polsl.take.restaurant.model.enums.OrderStatus;
 @Table(name = "orders")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+/**
+ * Order entity representing either a live table order or a future reservation.
+ */
 public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,10 +40,13 @@ public class Order {
     @JoinColumn(name = "customer_id", updatable = false)
     private Customer customer;
 
+    /**
+     * Creation time for walk-in orders or scheduled date-time for reservations.
+     */
     @Column(updatable = false, nullable = false)
     @NotNull
     private LocalDateTime orderDateTime;
-    
+
     @Setter
     private Integer tableNumber;
 
@@ -53,6 +59,12 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private List<OrderItem> orderItems = new ArrayList<>();
 
+    /**
+     * Creates an order for current time.
+     *
+     * @param customer customer owning the order (nullable for anonymous order)
+     * @param tableNumber assigned table number
+     */
     public Order(Customer customer, Integer tableNumber) {
         this.customer = customer;
         this.tableNumber = tableNumber;
@@ -60,7 +72,13 @@ public class Order {
         this.status = OrderStatus.OPEN;
     }
 
-    // Constructor for reservations with a specific orderDateTime
+    /**
+     * Creates an order scheduled for a specific date-time (reservation).
+     *
+     * @param customer customer owning the reservation
+     * @param tableNumber reserved table number
+     * @param orderDateTime reservation date-time
+     */
     public Order(Customer customer, Integer tableNumber, LocalDateTime orderDateTime) {
         this.customer = customer;
         this.tableNumber = tableNumber;

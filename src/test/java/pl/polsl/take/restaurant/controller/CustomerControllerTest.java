@@ -25,6 +25,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = CustomerController.class)
 @Import(GlobalExceptionHandler.class)
+/**
+ * Controller-layer tests for customer endpoints: routing, validation, and mapped HTTP statuses.
+ */
 class CustomerControllerTest {
 
     @Autowired
@@ -43,13 +46,9 @@ class CustomerControllerTest {
         objectMapper = new ObjectMapper();
     }
 
-    // -------------------------------------------------------------------------
-    // GET /customers/{id}
-    // -------------------------------------------------------------------------
-
     @Test
     void get_shouldReturn200WhenCustomerFound() throws Exception {
-        // Given - serwis nie rzuca wyjątku (domyślne zachowanie mocka → null)
+
         mockMvc.perform(get("/customers/1"))
                 .andExpect(status().isOk());
     }
@@ -62,10 +61,6 @@ class CustomerControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // -------------------------------------------------------------------------
-    // GET /customers
-    // -------------------------------------------------------------------------
-
     @Test
     void getAll_shouldReturn200WithEmptyList() throws Exception {
         when(customerService.getAll()).thenReturn(List.of());
@@ -74,14 +69,10 @@ class CustomerControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // -------------------------------------------------------------------------
-    // POST /customers - walidacja @Valid
-    // -------------------------------------------------------------------------
-
     @Test
     void create_shouldReturn400WhenFirstNameIsBlank() throws Exception {
         CreateCustomerDTO dto = new CreateCustomerDTO();
-        dto.setFirstName("   "); // @NotBlank
+        dto.setFirstName("   ");
         dto.setLastName("Kowalski");
 
         mockMvc.perform(post("/customers")
@@ -94,7 +85,7 @@ class CustomerControllerTest {
     void create_shouldReturn400WhenLastNameIsBlank() throws Exception {
         CreateCustomerDTO dto = new CreateCustomerDTO();
         dto.setFirstName("Jan");
-        dto.setLastName(""); // @NotBlank
+        dto.setLastName("");
 
         mockMvc.perform(post("/customers")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -107,7 +98,7 @@ class CustomerControllerTest {
         CreateCustomerDTO dto = new CreateCustomerDTO();
         dto.setFirstName("Jan");
         dto.setLastName("Kowalski");
-        dto.setEmail("not-an-email"); // @Email
+        dto.setEmail("not-an-email");
 
         mockMvc.perform(post("/customers")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -130,14 +121,10 @@ class CustomerControllerTest {
         verify(customerService).create(any(CreateCustomerDTO.class));
     }
 
-    // -------------------------------------------------------------------------
-    // PUT /customers/{id}
-    // -------------------------------------------------------------------------
-
     @Test
     void update_shouldReturn400WhenFirstNameIsBlank() throws Exception {
         UpdateCustomerDTO dto = new UpdateCustomerDTO();
-        dto.setFirstName(""); // @NotBlank
+        dto.setFirstName("");
         dto.setLastName("Kowalski");
 
         mockMvc.perform(put("/customers/1")
@@ -150,7 +137,7 @@ class CustomerControllerTest {
     void update_shouldReturn400WhenLastNameIsBlank() throws Exception {
         UpdateCustomerDTO dto = new UpdateCustomerDTO();
         dto.setFirstName("Jan");
-        dto.setLastName("  "); // @NotBlank
+        dto.setLastName("  ");
 
         mockMvc.perform(put("/customers/1")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -172,10 +159,6 @@ class CustomerControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // -------------------------------------------------------------------------
-    // DELETE /customers/{id} (anonymize)
-    // -------------------------------------------------------------------------
-
     @Test
     void anonymize_shouldReturn204WhenCustomerExists() throws Exception {
         mockMvc.perform(delete("/customers/1"))
@@ -191,10 +174,6 @@ class CustomerControllerTest {
         mockMvc.perform(delete("/customers/99"))
                 .andExpect(status().isNotFound());
     }
-
-    // -------------------------------------------------------------------------
-    // GET /customers/{id}/spending
-    // -------------------------------------------------------------------------
 
     @Test
     void getSpending_shouldReturn200() throws Exception {
@@ -212,10 +191,6 @@ class CustomerControllerTest {
         mockMvc.perform(get("/customers/99/spending"))
                 .andExpect(status().isNotFound());
     }
-
-    // -------------------------------------------------------------------------
-    // GET /customers/{id}/orders
-    // -------------------------------------------------------------------------
 
     @Test
     void orders_shouldReturn200() throws Exception {

@@ -23,6 +23,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+/**
+ * Unit tests for statistics service calculations and mapping of popularity query results.
+ */
 class StatsServiceTest {
 
     @Mock
@@ -37,53 +40,43 @@ class StatsServiceTest {
     @InjectMocks
     private StatsService statsService;
 
-    // -------------------------------------------------------------------------
-    // getRevenueBetween
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturnRevenueForGivenDateRange() {
-        // Given
+        // Given: repository returns aggregated revenue for selected range
         LocalDateTime from = LocalDateTime.of(2026, 6, 1, 0, 0);
-        LocalDateTime to   = LocalDateTime.of(2026, 6, 30, 23, 59);
+        LocalDateTime to = LocalDateTime.of(2026, 6, 30, 23, 59);
         when(orderRepo.sumRevenueBetween(from, to)).thenReturn(Optional.of(15000L));
 
-        // When
+        // When: revenue is requested
         Long result = statsService.getRevenueBetween(from, to);
 
-        // Then
+        // Then: returned value matches repository aggregation
         assertEquals(15000L, result);
         verify(orderRepo).sumRevenueBetween(from, to);
     }
 
     @Test
     void shouldReturnZeroWhenNoOrdersInDateRange() {
-        // Given - brak zamówień → repozytorium zwraca Optional.empty()
+        // Given: repository returns empty aggregate
         LocalDateTime from = LocalDateTime.of(2026, 1, 1, 0, 0);
-        LocalDateTime to   = LocalDateTime.of(2026, 1, 31, 23, 59);
+        LocalDateTime to = LocalDateTime.of(2026, 1, 31, 23, 59);
         when(orderRepo.sumRevenueBetween(from, to)).thenReturn(Optional.empty());
 
-        // When
+        // When: revenue is requested
         Long result = statsService.getRevenueBetween(from, to);
 
-        // Then
+        // Then: service maps empty aggregate to zero
         assertEquals(0L, result);
     }
 
-    // -------------------------------------------------------------------------
-    // getTodayRevenue
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturnTodayRevenueByDelegatingToSumRevenueBetween() {
-        // Given - mockujemy sumRevenueBetween dla dowolnego zakresu dat (dzisiejszy dzień)
+
         when(orderRepo.sumRevenueBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(Optional.of(3200L));
 
-        // When
         Long result = statsService.getTodayRevenue();
 
-        // Then
         assertEquals(3200L, result);
         verify(orderRepo).sumRevenueBetween(any(), any());
     }
@@ -96,10 +89,6 @@ class StatsServiceTest {
 
         assertEquals(0L, result);
     }
-
-    // -------------------------------------------------------------------------
-    // getWeekRevenue
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldReturnWeekRevenue() {
@@ -117,10 +106,6 @@ class StatsServiceTest {
         assertEquals(0L, statsService.getWeekRevenue());
     }
 
-    // -------------------------------------------------------------------------
-    // getMonthRevenue
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturnMonthRevenue() {
         when(orderRepo.sumRevenueBetween(any(), any())).thenReturn(Optional.of(150000L));
@@ -137,34 +122,29 @@ class StatsServiceTest {
         assertEquals(0L, statsService.getMonthRevenue());
     }
 
-    // -------------------------------------------------------------------------
-    // getDishPopularity
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturnDishPopularityWithNames() {
-        // Given
+        // Given: popularity rows and existing dishes for each ID
         Dish pizza = new Dish("Pizza Margherita", "Opis", 3200, 1000, SpicinessLevel.MILD);
         ReflectionTestUtils.setField(pizza, "id", 1L);
 
         Dish burger = new Dish("Burger Klasyczny", "Opis", 2500, 700, SpicinessLevel.MILD);
         ReflectionTestUtils.setField(burger, "id", 2L);
 
-        // Symulacja wyników z JPQL: [dishId, totalSold]
-        Object[] row1 = new Object[]{1L, 15L};
-        Object[] row2 = new Object[]{2L, 8L};
+        Object[] row1 = new Object[] { 1L, 15L };
+        Object[] row2 = new Object[] { 2L, 8L };
 
         LocalDateTime from = LocalDateTime.of(2026, 6, 1, 0, 0);
-        LocalDateTime to   = LocalDateTime.of(2026, 6, 30, 23, 59);
+        LocalDateTime to = LocalDateTime.of(2026, 6, 30, 23, 59);
 
         when(orderItemRepo.countDishOrders(from, to)).thenReturn(List.of(row1, row2));
         when(dishRepo.findById(1L)).thenReturn(Optional.of(pizza));
         when(dishRepo.findById(2L)).thenReturn(Optional.of(burger));
 
-        // When
+        // When: popularity report is requested
         List<DishPopularityDTO> result = statsService.getDishPopularity(from, to);
 
-        // Then
+        // Then: IDs, names and totals are mapped correctly
         assertEquals(2, result.size());
 
         DishPopularityDTO first = result.get(0);
@@ -180,19 +160,19 @@ class StatsServiceTest {
 
     @Test
     void shouldReturnUnknownDishWhenDishNoLongerExistsInDatabase() {
-        // Given - danie zostało usunięte z bazy, ale figuruje w historii zamówień
-        Object[] row = new Object[]{99L, 3L};
+        // Given: popularity row references dish missing in repository
+        Object[] row = new Object[] { 99L, 3L };
 
         LocalDateTime from = LocalDateTime.of(2026, 1, 1, 0, 0);
-        LocalDateTime to   = LocalDateTime.of(2026, 1, 31, 23, 59);
+        LocalDateTime to = LocalDateTime.of(2026, 1, 31, 23, 59);
 
         when(orderItemRepo.countDishOrders(from, to)).thenReturn(List.<Object[]>of(row));
         when(dishRepo.findById(99L)).thenReturn(Optional.empty());
 
-        // When
+        // When: popularity report is requested
         List<DishPopularityDTO> result = statsService.getDishPopularity(from, to);
 
-        // Then - fallback na "Unknown Dish"
+        // Then: missing dish name is replaced with fallback value
         assertEquals(1, result.size());
         assertEquals("Unknown Dish", result.get(0).getDishName());
         assertEquals(99L, result.get(0).getDishId());
@@ -201,27 +181,25 @@ class StatsServiceTest {
 
     @Test
     void shouldReturnEmptyListWhenNoDishesOrderedInRange() {
-        // Given - brak zamówień w podanym przedziale
+
         LocalDateTime from = LocalDateTime.of(2026, 5, 1, 0, 0);
-        LocalDateTime to   = LocalDateTime.of(2026, 5, 31, 23, 59);
+        LocalDateTime to = LocalDateTime.of(2026, 5, 31, 23, 59);
 
         when(orderItemRepo.countDishOrders(from, to)).thenReturn(List.of());
 
-        // When
         List<DishPopularityDTO> result = statsService.getDishPopularity(from, to);
 
-        // Then
         assertTrue(result.isEmpty());
-        verify(dishRepo, never()).findById(any()); // nie wchodzi do pętli mapowania
+        verify(dishRepo, never()).findById(any());
     }
 
     @Test
     void shouldHandleIntegerRowValuesFromJpqlAggregation() {
-        // Given - JPQL może zwrócić Integer zamiast Long w zależności od bazy danych
-        Object[] row = new Object[]{Integer.valueOf(5), Integer.valueOf(10)};
+        // Given: aggregation row returned as Integer values by JPA provider
+        Object[] row = new Object[] { Integer.valueOf(5), Integer.valueOf(10) };
 
         LocalDateTime from = LocalDateTime.of(2026, 6, 1, 0, 0);
-        LocalDateTime to   = LocalDateTime.of(2026, 6, 30, 23, 59);
+        LocalDateTime to = LocalDateTime.of(2026, 6, 30, 23, 59);
 
         Dish dish = new Dish("Zupa", "Opis", 1500, 300, SpicinessLevel.MILD);
         ReflectionTestUtils.setField(dish, "id", 5L);
@@ -229,10 +207,10 @@ class StatsServiceTest {
         when(orderItemRepo.countDishOrders(from, to)).thenReturn(List.<Object[]>of(row));
         when(dishRepo.findById(5L)).thenReturn(Optional.of(dish));
 
-        // When
+        // When: popularity report is requested
         List<DishPopularityDTO> result = statsService.getDishPopularity(from, to);
 
-        // Then - konwersja Number → Long działa poprawnie
+        // Then: numeric values are normalized to Long in DTO
         assertEquals(1, result.size());
         assertEquals(5L, result.get(0).getDishId());
         assertEquals(10L, result.get(0).getTotalSold());

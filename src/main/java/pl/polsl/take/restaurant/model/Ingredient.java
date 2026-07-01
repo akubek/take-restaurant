@@ -26,11 +26,14 @@ import pl.polsl.take.restaurant.model.enums.Unit;
 @Table(name = "ingredients")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+/**
+ * Ingredient entity used in dish recipes.
+ */
 public class Ingredient {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @Setter
     @NotBlank
     @Column(name = "ingredient_name")
@@ -49,6 +52,14 @@ public class Ingredient {
     @Column(name = "allergen")
     private Set<Allergen> allergens = new HashSet<>();
 
+    /**
+     * Creates an ingredient with dietary metadata.
+     *
+     * @param name ingredient name
+     * @param isVegan whether ingredient is vegan
+     * @param unit measurement unit used for recipes
+     * @param allergens allergen tags (nullable)
+     */
     public Ingredient(String name, Boolean isVegan, Unit unit, Set<Allergen> allergens) {
         this.name = name;
         this.isVegan = isVegan;
@@ -58,6 +69,11 @@ public class Ingredient {
         }
     }
 
+    /**
+     * Replaces allergen set atomically; passing {@code null} clears all allergens.
+     *
+     * @param newAllergens new allergen set or {@code null}
+     */
     public void updateAllergens(Set<Allergen> newAllergens) {
         this.allergens.clear();
         if (newAllergens != null) {

@@ -15,17 +15,25 @@ import pl.polsl.take.restaurant.repository.OrderRepository;
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
+/**
+ * Shared integration-test bootstrap with HTTP client and database cleanup between tests.
+ */
 public abstract class BaseIntegrationTest {
 
-    @Autowired protected TestRestTemplate restTemplate;
-    @Autowired protected OrderRepository orderRepository;
-    @Autowired protected CustomerRepository customerRepository;
-    @Autowired protected DishRepository dishRepository;
-    @Autowired protected IngredientRepository ingredientRepository;
+    @Autowired
+    protected TestRestTemplate restTemplate;
+    @Autowired
+    protected OrderRepository orderRepository;
+    @Autowired
+    protected CustomerRepository customerRepository;
+    @Autowired
+    protected DishRepository dishRepository;
+    @Autowired
+    protected IngredientRepository ingredientRepository;
 
     @BeforeEach
     void cleanDatabase() {
-        // order is important because of FK constraints
+
         orderRepository.deleteAll();
         dishRepository.deleteAll();
         ingredientRepository.deleteAll();

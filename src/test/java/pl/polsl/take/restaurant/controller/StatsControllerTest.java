@@ -18,6 +18,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = StatsController.class)
 @Import(GlobalExceptionHandler.class)
+/**
+ * Controller-layer tests for statistics endpoints covering revenue and popularity responses.
+ */
 class StatsControllerTest {
 
     @Autowired
@@ -25,10 +28,6 @@ class StatsControllerTest {
 
     @MockitoBean
     private StatsService statsService;
-
-    // -------------------------------------------------------------------------
-    // GET /stats/revenue/today
-    // -------------------------------------------------------------------------
 
     @Test
     void todayRevenue_shouldReturn200WithValue() throws Exception {
@@ -48,10 +47,6 @@ class StatsControllerTest {
                 .andExpect(content().string("0"));
     }
 
-    // -------------------------------------------------------------------------
-    // GET /stats/revenue/week
-    // -------------------------------------------------------------------------
-
     @Test
     void weekRevenue_shouldReturn200WithValue() throws Exception {
         when(statsService.getWeekRevenue()).thenReturn(42000L);
@@ -70,10 +65,6 @@ class StatsControllerTest {
                 .andExpect(content().string("0"));
     }
 
-    // -------------------------------------------------------------------------
-    // GET /stats/revenue/month
-    // -------------------------------------------------------------------------
-
     @Test
     void monthRevenue_shouldReturn200WithValue() throws Exception {
         when(statsService.getMonthRevenue()).thenReturn(150000L);
@@ -83,17 +74,13 @@ class StatsControllerTest {
                 .andExpect(content().string("150000"));
     }
 
-    // -------------------------------------------------------------------------
-    // GET /stats/revenue?from=...&to=...
-    // -------------------------------------------------------------------------
-
     @Test
     void revenueBetween_shouldReturn200WithValidParams() throws Exception {
         when(statsService.getRevenueBetween(any(), any())).thenReturn(15000L);
 
         mockMvc.perform(get("/stats/revenue")
                 .param("from", "2026-06-01T00:00:00")
-                .param("to",   "2026-06-30T23:59:59"))
+                .param("to", "2026-06-30T23:59:59"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("15000"));
 
@@ -106,14 +93,10 @@ class StatsControllerTest {
 
         mockMvc.perform(get("/stats/revenue")
                 .param("from", "2026-01-01T00:00:00")
-                .param("to",   "2026-01-31T23:59:59"))
+                .param("to", "2026-01-31T23:59:59"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("0"));
     }
-
-    // -------------------------------------------------------------------------
-    // GET /stats/popularity?from=...&to=...
-    // -------------------------------------------------------------------------
 
     @Test
     void dishPopularity_shouldReturn200WithEmptyList() throws Exception {
@@ -121,7 +104,7 @@ class StatsControllerTest {
 
         mockMvc.perform(get("/stats/popularity")
                 .param("from", "2026-06-01T00:00:00")
-                .param("to",   "2026-06-30T23:59:59"))
+                .param("to", "2026-06-30T23:59:59"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]"));
     }
@@ -133,7 +116,7 @@ class StatsControllerTest {
 
         mockMvc.perform(get("/stats/popularity")
                 .param("from", "2026-06-01T00:00:00")
-                .param("to",   "2026-06-30T23:59:59"))
+                .param("to", "2026-06-30T23:59:59"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].dishId").value(1))
                 .andExpect(jsonPath("$[0].dishName").value("Pizza"))

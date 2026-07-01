@@ -9,5 +9,6 @@ import pl.polsl.take.restaurant.model.Customer;
 
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
     List<Customer> findAllByIsActiveTrue();
+
     Optional<Customer> findByIdAndIsActiveTrue(Long id);
 }

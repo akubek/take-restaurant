@@ -14,6 +14,9 @@ import pl.polsl.take.restaurant.repository.DishRepository;
 import pl.polsl.take.restaurant.repository.OrderItemRepository;
 import pl.polsl.take.restaurant.repository.OrderRepository;
 
+/**
+ * Provides reporting use-cases such as revenue and dish popularity.
+ */
 @Service
 @RequiredArgsConstructor
 public class StatsService {
@@ -22,11 +25,23 @@ public class StatsService {
     private final OrderItemRepository orderItemRepo;
     private final DishRepository dishRepo;
 
+    /**
+     * Returns total paid revenue in the provided date-time range.
+     *
+     * @param from range start
+     * @param to range end
+     * @return revenue in minor currency units
+     */
     @Transactional(readOnly = true)
     public Long getRevenueBetween(LocalDateTime from, LocalDateTime to) {
         return orderRepo.sumRevenueBetween(from, to).orElse(0L);
     }
 
+    /**
+     * Returns revenue for current day.
+     *
+     * @return revenue in minor currency units
+     */
     @Transactional(readOnly = true)
     public Long getTodayRevenue() {
         LocalDateTime start = LocalDate.now().atStartOfDay();
@@ -34,12 +49,22 @@ public class StatsService {
         return getRevenueBetween(start, end);
     }
 
+    /**
+     * Returns revenue for trailing 7-day window.
+     *
+     * @return revenue in minor currency units
+     */
     @Transactional(readOnly = true)
     public Long getWeekRevenue() {
         LocalDateTime start = LocalDate.now().minusWeeks(1).atStartOfDay();
         return getRevenueBetween(start, LocalDateTime.now());
     }
 
+    /**
+     * Returns revenue for trailing 1-month window.
+     *
+     * @return revenue in minor currency units
+     */
     @Transactional(readOnly = true)
     public Long getMonthRevenue() {
         LocalDateTime start = LocalDate.now().minusMonths(1).atStartOfDay();
@@ -47,6 +72,13 @@ public class StatsService {
     }
 
 
+    /**
+     * Returns dish popularity as pairs of dish ID and total sold quantity for a date-time range.
+     *
+     * @param from range start
+     * @param to range end
+     * @return list of popularity DTOs
+     */
     @Transactional(readOnly = true)
     public List<DishPopularityDTO> getDishPopularity(LocalDateTime from, LocalDateTime to) {
         List<Object[]> results = orderItemRepo.countDishOrders(from, to);

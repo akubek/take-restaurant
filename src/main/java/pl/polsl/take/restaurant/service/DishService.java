@@ -21,6 +21,9 @@ import pl.polsl.take.restaurant.repository.DishRepository;
 import pl.polsl.take.restaurant.repository.IngredientRepository;
 import pl.polsl.take.restaurant.repository.OrderRepository;
 
+/**
+ * Handles dish management, including menu visibility and recipe-item validation.
+ */
 @Service
 @RequiredArgsConstructor
 public class DishService {
@@ -29,11 +32,23 @@ public class DishService {
     private final IngredientRepository ingredientRepo;
     private final OrderRepository orderRepo;
 
+    /**
+     * Returns an active dish by ID.
+     *
+     * @param id dish ID
+     * @return dish DTO
+     */
     @Transactional(readOnly = true)
     public DishDTO getById(Long id) {
         return new DishDTO(findActiveById(id));
     }
 
+    /**
+     * Returns recipe items for an active dish.
+     *
+     * @param dishId dish ID
+     * @return list of recipe item DTOs
+     */
     @Transactional(readOnly = true)
     public List<RecipeItemResponseDTO> getIngredients(Long dishId) {
         Dish dish = findActiveById(dishId);
@@ -42,6 +57,11 @@ public class DishService {
                 .toList();
     }
 
+    /**
+     * Returns all active dishes visible in menu.
+     *
+     * @return list of dish DTOs
+     */
     @Transactional(readOnly = true)
     public List<DishDTO> getMenu() {
         return dishRepo.findAllByIsActiveTrue()
@@ -50,6 +70,11 @@ public class DishService {
                 .toList();
     }
 
+    /**
+     * Returns all dishes including inactive ones.
+     *
+     * @return list of dish DTOs
+     */
     @Transactional(readOnly = true)
     public List<DishDTO> getAllDishes() {
         return dishRepo.findAll()
@@ -58,6 +83,13 @@ public class DishService {
                 .toList();
     }
 
+    /**
+     * Creates a dish and validates recipe items so each item references either an existing
+     * ingredient ID or an inline ingredient payload, but never both.
+     *
+     * @param dto dish creation payload
+     * @return created dish DTO
+     */
     @Transactional
     public DishDTO create(CreateDishDTO dto) {
         Dish dish = new Dish(
@@ -65,44 +97,38 @@ public class DishService {
                 dto.getDescription(),
                 dto.getPriceInCents(),
                 dto.getCalories(),
-                dto.getSpiciness()
-        );
+                dto.getSpiciness());
 
-        // Check if ingredients list is provided and not empty (allows dishes without recipes like canned drinks)
         if (dto.getIngredients() != null && !dto.getIngredients().isEmpty()) {
-            
+
             for (RecipeItemRequestDTO itemRequest : dto.getIngredients()) {
                 Ingredient ingredient;
 
                 boolean hasId = itemRequest.getIngredientId() != null;
                 boolean hasNewObject = itemRequest.getIngredient() != null;
 
-                // Strict validation: Only ONE of the fields can be present
                 if (hasId && !hasNewObject) {
-                    
-                    // Option 1: Link to an existing active ingredient
+
                     ingredient = ingredientRepo.findById(itemRequest.getIngredientId())
-                            .orElseThrow(() -> new NotFoundException("Ingredient with ID " + itemRequest.getIngredientId() + " not found or is inactive."));
-                            
+                            .orElseThrow(() -> new NotFoundException("Ingredient with ID "
+                                    + itemRequest.getIngredientId() + " not found or is inactive."));
+
                 } else if (!hasId && hasNewObject) {
-                    
-                    // Option 2: Create a brand new ingredient on the fly
+
                     CreateIngredientDTO newIngDto = itemRequest.getIngredient();
                     ingredient = new Ingredient(
                             newIngDto.getName(),
                             newIngDto.getIsVegan(),
                             newIngDto.getUnit(),
-                            newIngDto.getAllergens()
-                    );
+                            newIngDto.getAllergens());
                     ingredient = ingredientRepo.save(ingredient);
-                    
+
                 } else {
-                    
-                    // Invalid Request: Both are null OR both are filled
-                    throw new ConflictException("Invalid recipe item: You must provide EITHER an 'ingredientId' OR a 'ingredient' object, but not both or neither.");
+
+                    throw new ConflictException(
+                            "Invalid recipe item: You must provide EITHER an 'ingredientId' OR a 'ingredient' object, but not both or neither.");
                 }
 
-                // Add the validated recipe item to the dish
                 dish.getRecipeItems().add(new RecipeItem(dish, ingredient, itemRequest.getAmount()));
             }
         }
@@ -110,6 +136,13 @@ public class DishService {
         return new DishDTO(dishRepo.save(dish));
     }
 
+    /**
+     * Updates basic editable dish fields.
+     *
+     * @param id dish ID
+     * @param dto dish update payload
+     * @return updated dish DTO
+     */
     @Transactional
     public DishDTO update(Long id, UpdateDishDTO dto) {
         Dish dish = findActiveById(id);
@@ -121,39 +154,54 @@ public class DishService {
         return new DishDTO(dishRepo.save(dish));
     }
 
+    /**
+     * Deletes a dish permanently only if it has never been ordered; otherwise performs soft-delete.
+     *
+     * @param id dish ID
+     */
     @Transactional
     public void delete(Long id) {
         Dish dish = findActiveById(id);
 
-        // check if the dish has ever been ordered
         if (orderRepo.existsByOrderItemsDishId(id)) {
-            // if dish was ever ordered, it cannot be deleted, it's soft deleted instead - set as inactive
+
             dish.setIsActive(false);
             dishRepo.save(dish);
         } else {
-            // if dish was never ordered, it can be safely deleted from the database
+
             dishRepo.delete(dish);
         }
     }
 
+    /**
+     * Deactivates dish visibility in menu.
+     *
+     * @param id dish ID
+     */
     @Transactional
     public void deactivateDish(Long id) {
-        Dish dish = dishRepo.findById(id).orElseThrow(() -> new NotFoundException("Dish with ID " + id + " does not exist."));
+        Dish dish = dishRepo.findById(id)
+                .orElseThrow(() -> new NotFoundException("Dish with ID " + id + " does not exist."));
         dish.setIsActive(false);
         dishRepo.save(dish);
     }
 
+    /**
+     * Reactivates dish visibility in menu.
+     *
+     * @param id dish ID
+     */
     @Transactional
     public void reactivateDish(Long id) {
-        Dish dish = dishRepo.findById(id).orElseThrow(() -> new NotFoundException("Dish with ID " + id + " does not exist."));
+        Dish dish = dishRepo.findById(id)
+                .orElseThrow(() -> new NotFoundException("Dish with ID " + id + " does not exist."));
         dish.setIsActive(true);
         dishRepo.save(dish);
     }
 
-    // private method for finding active dish by ID, 
-    // throws NotFoundException if not found
     private Dish findActiveById(Long id) {
         return dishRepo.findByIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new NotFoundException("Dish with ID " + id + " does not exist or has been removed from the menu."));
+                .orElseThrow(() -> new NotFoundException(
+                        "Dish with ID " + id + " does not exist or has been removed from the menu."));
     }
 }

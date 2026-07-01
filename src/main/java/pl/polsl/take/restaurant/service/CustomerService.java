@@ -14,6 +14,9 @@ import pl.polsl.take.restaurant.repository.CustomerRepository;
 import pl.polsl.take.restaurant.repository.OrderRepository;
 import pl.polsl.take.restaurant.exception.NotFoundException;
 
+/**
+ * Handles customer lifecycle operations, including anonymization and spending reports.
+ */
 @Service
 @RequiredArgsConstructor
 public class CustomerService {
@@ -21,11 +24,22 @@ public class CustomerService {
 	private final OrderRepository orderRepo;
 	private final CustomerRepository customerRepo;
 
+	/**
+	 * Returns active customer by ID.
+	 *
+	 * @param id customer ID
+	 * @return customer DTO
+	 */
 	@Transactional(readOnly = true)
 	public CustomerDTO getById(Long id) {
 		return new CustomerDTO(findActiveById(id));
 	}
 
+	/**
+	 * Returns all active customers.
+	 *
+	 * @return list of customer DTOs
+	 */
 	@Transactional(readOnly = true)
 	public List<CustomerDTO> getAll() {
 		return customerRepo.findAllByIsActiveTrue()
@@ -33,17 +47,29 @@ public class CustomerService {
 				.map(CustomerDTO::new)
 				.toList();
 	}
-	
+
+	/**
+	 * Creates a new customer.
+	 *
+	 * @param dto customer creation payload
+	 * @return created customer DTO
+	 */
 	@Transactional
-	public CustomerDTO create(CreateCustomerDTO dto)
-	{
+	public CustomerDTO create(CreateCustomerDTO dto) {
 		Customer customer = new Customer(
 				dto.getFirstName(), dto.getLastName(),
 				dto.getPhoneNumber(), dto.getEmail());
-		
+
 		return new CustomerDTO(customerRepo.save(customer));
 	}
 
+	/**
+	 * Updates active customer data.
+	 *
+	 * @param id customer ID
+	 * @param dto customer update payload
+	 * @return updated customer DTO
+	 */
 	@Transactional
 	public CustomerDTO update(Long id, UpdateCustomerDTO dto) {
 		Customer customer = findActiveById(id);
@@ -55,6 +81,11 @@ public class CustomerService {
 		return new CustomerDTO(customerRepo.save(customer));
 	}
 
+	/**
+	 * Soft-deletes a customer by replacing personal data with anonymized values.
+	 *
+	 * @param id customer ID
+	 */
 	@Transactional
 	public void anonymize(Long id) {
 		Customer customer = findActiveById(id);
@@ -68,16 +99,22 @@ public class CustomerService {
 		customerRepo.save(customer);
 	}
 
+	/**
+	 * Returns total paid spending for an active customer.
+	 *
+	 * @param id customer ID
+	 * @return spending in minor currency units
+	 */
 	@Transactional(readOnly = true)
-    public Long getTotalSpending(Long id) {
-        findActiveById(id);
- 
-        return orderRepo.sumCustomerSpending(id).orElse(0L);
-    }
- 
+	public Long getTotalSpending(Long id) {
+		findActiveById(id);
+
+		return orderRepo.sumCustomerSpending(id).orElse(0L);
+	}
+
 	private Customer findActiveById(Long id) {
-        return customerRepo.findByIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new NotFoundException("Customer with ID " + id + " does not exist."));
-    }
+		return customerRepo.findByIdAndIsActiveTrue(id)
+				.orElseThrow(() -> new NotFoundException("Customer with ID " + id + " does not exist."));
+	}
 
 }

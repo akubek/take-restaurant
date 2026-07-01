@@ -8,7 +8,7 @@ public class RecipeItemResponseDTO {
     private String ingredientName;
     private Double amount;
     private String unit;
-    
+
     private Boolean isVegan;
 
     public RecipeItemResponseDTO(RecipeItem item) {

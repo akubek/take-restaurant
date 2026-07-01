@@ -11,13 +11,13 @@ import lombok.Setter;
 public class CreateOrderItemDTO {
 	@NotNull
 	private Long dishId;
-	
+
 	@NotNull
 	@Min(value = 1)
 	private Integer quantity;
-	
+
 	@Positive
 	private Integer seatNumber;
-	
+
 	private String notes;
 }

@@ -24,6 +24,9 @@ import pl.polsl.take.restaurant.repository.DishRepository;
 import pl.polsl.take.restaurant.repository.OrderItemRepository;
 import pl.polsl.take.restaurant.repository.OrderRepository;
 
+/**
+ * Handles order lifecycle, reservation validation, item state changes, and payment checks.
+ */
 @Service
 @RequiredArgsConstructor
 public class OrderService {
@@ -33,14 +36,28 @@ public class OrderService {
     private final DishRepository dishRepo;
     private final OrderItemRepository orderItemRepo;
 
-    // Założony, bezpieczny czas trwania wizyty dla rezerwacji
+    /**
+     * Time window used to detect table reservation overlaps before and after requested time.
+     */
     private static final long RESERVATION_MARGIN_HOURS = 2;
 
+    /**
+     * Returns order by ID.
+     *
+     * @param id order ID
+     * @return order DTO
+     */
     @Transactional(readOnly = true)
     public OrderDTO getById(Long id) {
         return new OrderDTO(findOrderById(id));
     }
 
+    /**
+     * Returns all orders for a customer.
+     *
+     * @param customerId customer ID
+     * @return list of order DTOs
+     */
     @Transactional(readOnly = true)
     public List<OrderDTO> getByCustomerId(Long customerId) {
         return orderRepo.findByCustomerId(customerId).stream()
@@ -48,6 +65,12 @@ public class OrderService {
                 .toList();
     }
 
+    /**
+     * Returns all items in selected order.
+     *
+     * @param orderId order ID
+     * @return list of item DTOs
+     */
     @Transactional(readOnly = true)
     public List<OrderItemDTO> getOrderItems(Long orderId) {
         Order order = findOrderById(orderId);
@@ -56,6 +79,13 @@ public class OrderService {
                 .toList();
     }
 
+    /**
+     * Returns one order item and verifies that it belongs to provided order.
+     *
+     * @param orderId order ID
+     * @param itemId order item ID
+     * @return item DTO
+     */
     @Transactional(readOnly = true)
     public OrderItemDTO getOrderItem(Long orderId, Long itemId) {
         Order order = findOrderById(orderId);
@@ -68,6 +98,11 @@ public class OrderService {
         return new OrderItemDTO(item);
     }
 
+    /**
+     * Returns all orders.
+     *
+     * @return list of order DTOs
+     */
     @Transactional(readOnly = true)
     public List<OrderDTO> getAll() {
         return orderRepo.findAll().stream()
@@ -75,6 +110,12 @@ public class OrderService {
                 .toList();
     }
 
+    /**
+     * Creates an immediate order or a future reservation depending on orderDateTime.
+     *
+     * @param dto order creation payload
+     * @return created order DTO
+     */
     @Transactional
     public OrderDTO create(CreateOrderDTO dto) {
         Customer customer = null;
@@ -85,59 +126,67 @@ public class OrderService {
 
         Order order;
 
-        // reservation
         if (dto.getOrderDateTime() != null) {
             if (customer == null) {
                 throw new ConflictException("Future reservations require an assigned customer.");
             }
-            
-            // check if the reservation date is in the future
+
             if (dto.getOrderDateTime().isBefore(LocalDateTime.now())) {
                 throw new ConflictException("Reservation date must be in the future.");
             }
 
-            // check table availability for the requested time slot
             checkTableAvailability(dto.getTableNumber(), dto.getOrderDateTime(), RESERVATION_MARGIN_HOURS);
-            
-            // create future order
+
             order = new Order(customer, dto.getTableNumber(), dto.getOrderDateTime());
-            
-        } 
-        // order for now
+
+        }
+
         else {
-            // default constructor - current time
+
             order = new Order(customer, dto.getTableNumber());
         }
 
-        // map order items from DTO to OrderItem entities and add them to the order
         for (CreateOrderItemDTO itemDto : dto.getItems()) {
             Dish dish = findActiveDish(itemDto.getDishId());
             order.getOrderItems().add(
-                    new OrderItem(dish, itemDto.getQuantity(), itemDto.getSeatNumber(), itemDto.getNotes(), order)
-            );
+                    new OrderItem(dish, itemDto.getQuantity(), itemDto.getSeatNumber(), itemDto.getNotes(), order));
         }
 
         return new OrderDTO(orderRepo.save(order));
     }
 
+    /**
+     * Adds item to an open order.
+     *
+     * @param orderId order ID
+     * @param itemDto item payload
+     * @return updated order DTO
+     */
     @Transactional
     public OrderDTO addItemToOrder(Long orderId, CreateOrderItemDTO itemDto) {
         Order order = findOrderById(orderId);
 
-        // block adding order items to closed (cancelled or paid) orders
         if (order.getStatus() != OrderStatus.OPEN) {
             throw new ConflictException("Can only add items to open orders.");
         }
 
         Dish dish = findActiveDish(itemDto.getDishId());
-        OrderItem newItem = new OrderItem(dish, itemDto.getQuantity(), itemDto.getSeatNumber(), itemDto.getNotes(), order);
-        
+        OrderItem newItem = new OrderItem(dish, itemDto.getQuantity(), itemDto.getSeatNumber(), itemDto.getNotes(),
+                order);
+
         order.getOrderItems().add(newItem);
         orderItemRepo.save(newItem);
 
         return new OrderDTO(order);
     }
 
+    /**
+     * Updates status of one order item.
+     *
+     * @param orderId order ID
+     * @param itemId item ID
+     * @param newStatus target status
+     */
     @Transactional
     public void updateItemStatus(Long orderId, Long itemId, OrderItemStatus newStatus) {
         Order order = findOrderById(orderId);
@@ -160,17 +209,21 @@ public class OrderService {
         orderItemRepo.save(item);
     }
 
+    /**
+     * Soft-cancels one order item.
+     *
+     * @param orderId order ID
+     * @param itemId item ID
+     */
     @Transactional
     public void cancelOrderItem(Long orderId, Long itemId) {
         Order order = findOrderById(orderId);
         OrderItem item = findOrderItemById(itemId);
 
-        // Ensure the item belongs to the given order
         if (!item.getOrder().getId().equals(order.getId())) {
             throw new ConflictException("This item does not belong to the specified order.");
         }
 
-        // Rule: Editing/deleting is only possible when the order is not yet paid
         if (order.getStatus() == OrderStatus.PAID) {
             throw new ConflictException("Cannot modify items in an order that has already been paid.");
         }
@@ -179,6 +232,11 @@ public class OrderService {
         orderItemRepo.save(item);
     }
 
+    /**
+     * Marks a full order as cancelled and cancels all of its items.
+     *
+     * @param orderId order ID
+     */
     @Transactional
     public void cancelOrder(Long orderId) {
         Order order = findOrderById(orderId);
@@ -187,15 +245,20 @@ public class OrderService {
             throw new ConflictException("Cannot cancel an order that has already been paid.");
         }
 
-        // soft delete the order
         order.setStatus(OrderStatus.CANCELLED);
-        
-        // cancel all order items associated with this order
-        for (OrderItem item : order.getOrderItems()) item.setIsCancelled(true);
+
+        for (OrderItem item : order.getOrderItems())
+            item.setIsCancelled(true);
 
         orderRepo.save(order);
     }
 
+    /**
+     * Marks an order as paid only when all non-cancelled items are delivered.
+     *
+     * @param orderId order ID
+     * @return paid order DTO
+     */
     @Transactional
     public OrderDTO payOrder(Long orderId) {
         Order order = findOrderById(orderId);
@@ -207,35 +270,42 @@ public class OrderService {
             throw new ConflictException("Cannot pay a cancelled order.");
         }
 
-        // check if the order has any valid (non-cancelled) items
         boolean hasValidItems = order.getOrderItems().stream()
-        .anyMatch(item -> !item.getIsCancelled());
+                .anyMatch(item -> !item.getIsCancelled());
 
         if (!hasValidItems) {
             throw new ConflictException("Cannot pay an empty order. Please cancel the order instead.");
         }
 
-        // CHECK: Are there any unfinished dishes?
         boolean hasPendingItems = order.getOrderItems().stream()
-                .filter(item -> !item.getIsCancelled()) // Ignore cancelled items
+                .filter(item -> !item.getIsCancelled())
                 .anyMatch(item -> item.getStatus() != OrderItemStatus.DELIVERED);
 
         if (hasPendingItems) {
-            throw new ConflictException("Cannot close the bill. The order contains items that have not yet been delivered to the customer or cancelled.");
+            throw new ConflictException(
+                    "Cannot close the bill. The order contains items that have not yet been delivered to the customer or cancelled.");
         }
 
         order.setStatus(OrderStatus.PAID);
         return new OrderDTO(orderRepo.save(order));
     }
 
-    // kitchen view - new and preparing orders
+    /**
+     * Returns open orders that still have NEW or PREPARING items.
+     *
+     * @return list of kitchen-visible orders
+     */
     @Transactional(readOnly = true)
     public List<OrderDTO> getKitchenOrders() {
         return orderRepo.findOrdersByItemStatuses(List.of(OrderItemStatus.NEW, OrderItemStatus.PREPARING))
                 .stream().map(OrderDTO::new).toList();
     }
 
-    // waiter view - ready for pickup orders
+    /**
+     * Returns open orders that have READY items waiting for pickup.
+     *
+     * @return list of waiter-visible orders
+     */
     @Transactional(readOnly = true)
     public List<OrderDTO> getWaiterPickupOrders() {
         return orderRepo.findOrdersByItemStatuses(List.of(OrderItemStatus.READY))
@@ -254,7 +324,8 @@ public class OrderService {
 
     private Dish findActiveDish(Long id) {
         return dishRepo.findByIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new NotFoundException("Dish with ID " + id + " does not exist or has been removed from the menu."));
+                .orElseThrow(() -> new NotFoundException(
+                        "Dish with ID " + id + " does not exist or has been removed from the menu."));
     }
 
     private void checkTableAvailability(Integer tableNumber, LocalDateTime requestedTime, Long reservationMarginHours) {
@@ -262,11 +333,11 @@ public class OrderService {
         LocalDateTime endTime = requestedTime.plusHours(reservationMarginHours);
 
         boolean isOccupied = orderRepo.existsByTableNumberAndStatusNotAndOrderDateTimeBetween(
-                tableNumber, OrderStatus.CANCELLED, startTime, endTime
-        );
+                tableNumber, OrderStatus.CANCELLED, startTime, endTime);
 
         if (isOccupied) {
-            throw new ConflictException("Table number " + tableNumber + " is already reserved in the time slot from " + startTime + " to " + endTime + ".");
+            throw new ConflictException("Table number " + tableNumber + " is already reserved in the time slot from "
+                    + startTime + " to " + endTime + ".");
         }
     }
 }

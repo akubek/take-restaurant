@@ -10,6 +10,9 @@ import pl.polsl.take.restaurant.model.Ingredient;
 import pl.polsl.take.restaurant.repository.IngredientRepository;
 import pl.polsl.take.restaurant.repository.RecipeItemRepository;
 
+/**
+ * Manages ingredient CRUD operations and protects referenced ingredients from deletion.
+ */
 @Service
 @RequiredArgsConstructor
 public class IngredientService {
@@ -17,11 +20,22 @@ public class IngredientService {
     private final IngredientRepository ingredientRepo;
     private final RecipeItemRepository recipeItemRepo;
 
+    /**
+     * Returns ingredient by ID.
+     *
+     * @param id ingredient ID
+     * @return ingredient DTO
+     */
     @Transactional(readOnly = true)
     public IngredientDTO getById(Long id) {
         return new IngredientDTO(findByIdOrThrow(id));
     }
 
+    /**
+     * Returns all ingredients.
+     *
+     * @return list of ingredient DTOs
+     */
     @Transactional(readOnly = true)
     public List<IngredientDTO> getAll() {
         return ingredientRepo.findAll().stream()
@@ -29,14 +43,26 @@ public class IngredientService {
                 .toList();
     }
 
+    /**
+     * Creates a new ingredient.
+     *
+     * @param dto ingredient creation payload
+     * @return created ingredient DTO
+     */
     @Transactional
     public IngredientDTO create(CreateIngredientDTO dto) {
         Ingredient ingredient = new Ingredient(
-                dto.getName(), dto.getIsVegan(), dto.getUnit(), dto.getAllergens()
-        );
+                dto.getName(), dto.getIsVegan(), dto.getUnit(), dto.getAllergens());
         return new IngredientDTO(ingredientRepo.save(ingredient));
     }
 
+    /**
+     * Updates ingredient data.
+     *
+     * @param id ingredient ID
+     * @param dto ingredient update payload
+     * @return updated ingredient DTO
+     */
     @Transactional
     public IngredientDTO update(Long id, UpdateIngredientDTO dto) {
         Ingredient ingredient = findByIdOrThrow(id);
@@ -46,11 +72,15 @@ public class IngredientService {
         return new IngredientDTO(ingredientRepo.save(ingredient));
     }
 
+    /**
+     * Deletes an ingredient only when it is not referenced by any recipe item.
+     *
+     * @param id ingredient ID
+     */
     @Transactional
     public void delete(Long id) {
         Ingredient ingredient = findByIdOrThrow(id);
 
-        // block if the ingredient is used in ANY recipe
         if (recipeItemRepo.existsByIngredientId(id)) {
             throw new ConflictException("Cannot delete ingredient because it is used in an existing recipe.");
         }

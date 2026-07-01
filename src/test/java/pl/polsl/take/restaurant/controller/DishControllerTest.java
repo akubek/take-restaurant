@@ -26,6 +26,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = DishController.class)
 @Import(GlobalExceptionHandler.class)
+/**
+ * Controller-layer tests for dish endpoints, including validation and conflict/not-found handling.
+ */
 class DishControllerTest {
 
     @Autowired
@@ -41,10 +44,6 @@ class DishControllerTest {
         objectMapper = new ObjectMapper();
     }
 
-    // -------------------------------------------------------------------------
-    // GET /dishes/{id}
-    // -------------------------------------------------------------------------
-
     @Test
     void get_shouldReturn200WhenDishFound() throws Exception {
         mockMvc.perform(get("/dishes/1"))
@@ -58,10 +57,6 @@ class DishControllerTest {
         mockMvc.perform(get("/dishes/99"))
                 .andExpect(status().isNotFound());
     }
-
-    // -------------------------------------------------------------------------
-    // GET /dishes/{id}/ingredients
-    // -------------------------------------------------------------------------
 
     @Test
     void getIngredients_shouldReturn200WhenDishFound() throws Exception {
@@ -79,10 +74,6 @@ class DishControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // -------------------------------------------------------------------------
-    // GET /dishes/menu
-    // -------------------------------------------------------------------------
-
     @Test
     void getMenu_shouldReturn200() throws Exception {
         when(dishService.getMenu()).thenReturn(List.of());
@@ -90,10 +81,6 @@ class DishControllerTest {
         mockMvc.perform(get("/dishes/menu"))
                 .andExpect(status().isOk());
     }
-
-    // -------------------------------------------------------------------------
-    // GET /dishes
-    // -------------------------------------------------------------------------
 
     @Test
     void getAll_shouldReturn200() throws Exception {
@@ -103,14 +90,10 @@ class DishControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // -------------------------------------------------------------------------
-    // POST /dishes - walidacja @Valid
-    // -------------------------------------------------------------------------
-
     @Test
     void create_shouldReturn400WhenNameIsBlank() throws Exception {
         CreateDishDTO dto = new CreateDishDTO();
-        dto.setName("   "); // @NotBlank
+        dto.setName("   ");
         dto.setPriceInCents(3200);
         dto.setCalories(1000);
         dto.setSpiciness(SpicinessLevel.MILD);
@@ -125,7 +108,7 @@ class DishControllerTest {
     void create_shouldReturn400WhenPriceIsNull() throws Exception {
         CreateDishDTO dto = new CreateDishDTO();
         dto.setName("Pizza");
-        dto.setPriceInCents(null); // @NotNull
+        dto.setPriceInCents(null);
         dto.setCalories(1000);
         dto.setSpiciness(SpicinessLevel.MILD);
 
@@ -139,7 +122,7 @@ class DishControllerTest {
     void create_shouldReturn400WhenPriceIsNegative() throws Exception {
         CreateDishDTO dto = new CreateDishDTO();
         dto.setName("Pizza");
-        dto.setPriceInCents(-100); // @Positive
+        dto.setPriceInCents(-100);
         dto.setCalories(1000);
         dto.setSpiciness(SpicinessLevel.MILD);
 
@@ -154,7 +137,7 @@ class DishControllerTest {
         CreateDishDTO dto = new CreateDishDTO();
         dto.setName("Pizza");
         dto.setPriceInCents(3200);
-        dto.setCalories(null); // @NotNull
+        dto.setCalories(null);
         dto.setSpiciness(SpicinessLevel.MILD);
 
         mockMvc.perform(post("/dishes")
@@ -169,7 +152,7 @@ class DishControllerTest {
         dto.setName("Pizza");
         dto.setPriceInCents(3200);
         dto.setCalories(1000);
-        dto.setSpiciness(null); // @NotNull
+        dto.setSpiciness(null);
 
         mockMvc.perform(post("/dishes")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -195,7 +178,7 @@ class DishControllerTest {
 
     @Test
     void create_shouldReturn409WhenConflict() throws Exception {
-        // Given - np. zarówno ingredientId jak i ingredient object podane
+
         when(dishService.create(any())).thenThrow(new ConflictException("Invalid recipe item configuration."));
 
         CreateDishDTO dto = new CreateDishDTO();
@@ -210,14 +193,10 @@ class DishControllerTest {
                 .andExpect(status().isConflict());
     }
 
-    // -------------------------------------------------------------------------
-    // PUT /dishes/{id}
-    // -------------------------------------------------------------------------
-
     @Test
     void update_shouldReturn400WhenNameIsBlank() throws Exception {
         UpdateDishDTO dto = new UpdateDishDTO();
-        dto.setName(""); // @NotBlank
+        dto.setName("");
         dto.setPriceInCents(3200);
 
         mockMvc.perform(put("/dishes/1")
@@ -230,7 +209,7 @@ class DishControllerTest {
     void update_shouldReturn400WhenPriceIsNull() throws Exception {
         UpdateDishDTO dto = new UpdateDishDTO();
         dto.setName("Pizza");
-        dto.setPriceInCents(null); // @NotNull
+        dto.setPriceInCents(null);
 
         mockMvc.perform(put("/dishes/1")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -252,10 +231,6 @@ class DishControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // -------------------------------------------------------------------------
-    // DELETE /dishes/{id}
-    // -------------------------------------------------------------------------
-
     @Test
     void delete_shouldReturn200WhenDishExists() throws Exception {
         mockMvc.perform(delete("/dishes/1"))
@@ -272,10 +247,6 @@ class DishControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // -------------------------------------------------------------------------
-    // PATCH /dishes/{id}/deactivate
-    // -------------------------------------------------------------------------
-
     @Test
     void deactivateDish_shouldReturn200WhenDishExists() throws Exception {
         mockMvc.perform(patch("/dishes/1/deactivate"))
@@ -291,10 +262,6 @@ class DishControllerTest {
         mockMvc.perform(patch("/dishes/99/deactivate"))
                 .andExpect(status().isNotFound());
     }
-
-    // -------------------------------------------------------------------------
-    // PATCH /dishes/{id}/reactivate
-    // -------------------------------------------------------------------------
 
     @Test
     void reactivateDish_shouldReturn200WhenDishExists() throws Exception {

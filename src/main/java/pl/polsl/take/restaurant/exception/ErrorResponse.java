@@ -1,3 +1,10 @@
 package pl.polsl.take.restaurant.exception;
 
-public record ErrorResponse(int status, String message) {}
+/**
+ * Standard API error payload returned by exception handlers.
+ *
+ * @param status HTTP status code
+ * @param message human-readable error message
+ */
+public record ErrorResponse(int status, String message) {
+}
