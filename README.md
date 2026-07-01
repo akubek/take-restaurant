@@ -56,7 +56,7 @@ Baza danych H2 działa w pamięci i jest uruchamiana automatycznie wraz z aplika
 
 ## Dokumentacja API (Swagger)
 Po poprawnym uruchomieniu aplikacji, interaktywna dokumentacja oraz interfejs do ręcznego testowania endpointów dostępne są w przeglądarce pod adresem:
-http://localhost:8080/swagger-ui.html
+http://localhost:8080/swagger-ui/index.html
 
 Plik z definicją API w formacie OpenAPI (YAML) można pobrać pod adresem:
 http://localhost:8080/v3/api-docs.yaml
