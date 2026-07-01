@@ -14,25 +14,45 @@ Backendowa aplikacja typu REST API służąca do zarządzania procesami w restau
 - JUnit 5 / TestRestTemplate
 - SpringDoc OpenAPI (Swagger)
 
-## Instrukcja uruchomienia
+## Instalacja i uruchomienie
 
 ### Wymagania wstępne
-Do uruchomienia projektu wymagane jest wyłącznie zainstalowane środowisko uruchomieniowe Java (JDK 17). Pobieraniem zależności, bazy danych H2 oraz konfiguracją frameworka zarządza narzędzie Maven Wrapper.
+Do uruchomienia projektu wymagane jest wyłącznie zainstalowane środowisko uruchomieniowe Java (JDK 17). 
+Pobieraniem zależności, budowaniem aplikacji oraz uruchomieniem bazy danych zarządza dołączone narzędzie Maven Wrapper (mvnw). Nie ma potrzeby instalowania Mavena jako zewnętrznego narzędzia w systemie
 
-### Uruchomienie aplikacji
-Należy otworzyć terminal w głównym katalogu projektu i wykonać poniższe polecenie:
-
+Należy najpierw pobrać projekt, np. poprzez
 ```
+git clone https://github.com/akubek/take-restaurant.git
+```
+
+### Kroki budowania projektu oraz uruchomienia:
+
+#### Linux / macOS
+
+1. Otworzyć terminal w głównym katalogu projektu.
+2. Zbudowanie projektu:
+```bash
+chmod +x mvnw
+./mvnw clean package
+```
+3. Uruchomienie aplikacji:
+```bash
 ./mvnw spring-boot:run
 ```
 
-Dla systemów z rodziny Windows należy użyć polecenia:
+#### Windows
 
+1. Otworzyć terminal w głównym katalogu projektu.
+2. Zbudowanie projektu:
+```cmd
+mvnw.cmd clean package
 ```
+3. Uruchomienie aplikacji:
+```cmd
 mvnw.cmd spring-boot:run
 ```
 
-Baza danych H2 działa w pamięci i jest uruchamiana automatycznie wraz z aplikacją. 
+Baza danych H2 działa w pamięci i jest uruchamiana automatycznie wraz z aplikacją. Dane nie są przechowywane.
 
 ## Dokumentacja API (Swagger)
 Po poprawnym uruchomieniu aplikacji, interaktywna dokumentacja oraz interfejs do ręcznego testowania endpointów dostępne są w przeglądarce pod adresem:
